@@ -167,9 +167,9 @@ def strip_whitespace_af_semicolon(df, col):
     :return: the clean dataframe
     """
     df[col] = df[col].apply(str)
-    from VC_collections.value import semiColonStriper
+    from VC_collections.value import semiColonStripper
 
-    df[col] = df[col].apply(semiColonStriper)
+    df[col] = df[col].apply(semiColonStripper)
     df[col] = df[col].str.replace("; ", ";")
     return df
 

@@ -1,27 +1,3 @@
-"""
-SYNOPSIS
-    TODO helloworld [-h,--help] [-v,--verbose] [--version]
-
-DESCRIPTION
-    TODO This describes how to use this script. This docstring
-    will be printed by the script if there is an error or
-    if the user requests help (-h or --help).
-    
-PROJECT NAME:
-    untitled
-
-AUTHOR
-    Yael Vardina Gherman <Yael.VardinaGherman@nli.org.il>
-    Yael Vardina Gherman <gh.gherman@gmail.com>
-
-LICENSE
-    This script is in the public domain, free from copyrights or restrictions.
-
-VERSION
-    Date: 29/07/2019 15:31
-    
-    $
-"""
 import logging
 import re
 import sys
@@ -55,7 +31,7 @@ def isNaN(value):
 
 def find_nth(string, searchFor, n):
     """
-    finds the n'th occurrence of a substring (searchFor) in a string.
+    finds the nth occurrence of a substring (searchFor) in a string.
 
     :param string: the string to search
     :param searchFor: the substring to search for
@@ -84,7 +60,7 @@ def utf8len(s):
     """
     checks the length of a given utf8 encoded s string
     :param s: the string to check
-    :return: the lentgh of a the given string s
+    :return: the length of a the given string s
     """
     return len(s.encode("utf-8"))
 
@@ -123,7 +99,7 @@ def date_validate(date_text):
 
 
 # strip trailing semicolon function
-semiColonStriper = lambda x: x.rstrip(";")
+semiColonStripper = lambda x: x.rstrip(";")
 
 # Cleaning Text from special Characters
 clean_text = lambda x: "".join(e for e in str(x) if e.isalnum())

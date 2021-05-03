@@ -380,7 +380,6 @@ final_fields_back_mapper = {
     "UNITITLE": "כותרת",
     "UNITITLE_ENG": "כותרת אנגלית",
     "UNITITLE_AR": "כותרת ערבית",
-    "UNITITLE_AR": "כותרת ערבית",
     "WORKS": "מילות מפתח_יצירות",
     "NUMBER_OF_FILES": "מספר קבצים לאחר דיגיטציה",
     "SECONDARY_UNITITLE": "כותרת משנה",

@@ -709,7 +709,9 @@ def main():
 
     logger.info(f"[BARCODE] Changing BARDODE column from string to integer")
 
-    collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(lambda x:x.rstrip(".0"))
+    collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(
+        lambda x: x.rstrip(".0")
+    )
 
     logger.info(f"[ARCHIVAL_MATERIAL] Starting to work on ARCHIVAL_MATERIAL column")
     collection.full_catalog = check_values_against_cvoc(

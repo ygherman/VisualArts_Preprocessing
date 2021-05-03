@@ -1,6 +1,5 @@
 import pandas as pd
 from numpy import nan
-from pandas._libs.tslibs.timestamps import Timestamp
 
 collection_test1 = {
     "סימול האוסף": {0: "ArBe"},
@@ -75,7 +74,7 @@ collection_test2 = {
     "חומרים קשורים": {0: nan},
     "מידע נוסף": {0: nan},
     "שם הרושם": {0: "הדר פורת"},
-    "תאריך הרישום": {0: Timestamp("2018-09-20 00:00:00")},
+    "תאריך הרישום": {0: "2018-09-20"},
 }
 
 df_collection_test1 = pd.DataFrame(collection_test1)
