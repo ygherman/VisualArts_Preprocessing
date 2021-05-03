@@ -104,7 +104,7 @@ def order_media_format(df_media_format_auth):
     ).to_dict()
 
     for key, value in media_format_mapping_dict.items():
-        media_format_mapping_dict[key] = [value]
+        media_format_mapping_dict[key] = value
 
     return media_format_auth, media_format_mapping_dict
 
@@ -184,7 +184,8 @@ def create_privacy_mapping_dict(df_privacy_values):
     ).apply(lambda x: "$$f" + x)
 
     privacy_search = pd.Series(
-        df_privacy_values["רמיזות"].apply(lambda x: x.split(";")), index=df_privacy_values.index.values
+        df_privacy_values["רמיזות"].apply(lambda x: x.split(";")),
+        index=df_privacy_values.index.values,
     ).to_dict()
 
     privacy_search_dict = dict()
