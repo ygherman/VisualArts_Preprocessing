@@ -188,12 +188,16 @@ def create_privacy_mapping_dict(df_privacy_values):
         index=df_privacy_values.index.values,
     ).to_dict()
 
-    privacy_search_dict = dict()
-    for key, value in privacy_search.items():
-        for item in value:
-            privacy_search_dict[item] = key
+    # privacy_search_dict = dict()
+    # for key, value in privacy_search.items():
+    #     for item in value:
+    #         privacy_search_dict[item] = key
 
-    return privacy_mapping_dict, privacy_search_dict
+    privacy_search_dict = pd.Series(
+                                    df_privacy_values["רמיזות"].values,
+                                    index=df_privacy_values.index.values).to_dict()
+
+    return privacy_mapping_dict,  privacy_search_dict
 
 
 def create_countries_mapping_dict(df_countries):

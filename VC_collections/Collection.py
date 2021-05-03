@@ -368,6 +368,7 @@ class Collection:
         """
             The function replaces the column header names according to the field mapper dictionary.
             This is in order to create a unified table with the same structure and columnnames.
+        :param type: type defines the table, whether it is the collection table or the catalog table.
         :param df: original dataframe
         :return: the modified dataframe with the new column headers
         """

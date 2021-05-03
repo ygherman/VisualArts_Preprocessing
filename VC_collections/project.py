@@ -176,12 +176,11 @@ def get_branch_colletionID(
     return CMS, branch, collectionID
 
 
-def get_root_index_and_title(df, index):
+def get_root_index_and_title(index: str, df: pd.DataFrame) -> tuple:
     """
         Get the title of the parent record
-    :param df: The original dataframe,
-    :param df: The original dataframe,
-    :param mms_id:
+    :param index: the index for which the rootid (parent id) should be looked for.
+    :param df: The whole dataframe
     :return:
     """
     logger = logging.getLogger(__name__)
