@@ -26,6 +26,8 @@ from pathlib import Path
 import pandas as pd
 
 # ROOTID finder
+import xlsxwriter
+
 from .columns import drop_col_if_exists
 from .value import find_nth
 
@@ -85,12 +87,10 @@ def get_alma_sid(custom04_path, collectionID, df):
     # parse sysno file
     try:
         xl2 = pd.ExcelFile(alma_sysno_file)
-    except FileNotFoundError:
-        sys.stderr.write(
-            f"The file does [{alma_sysno_file}] not exist in the custom04\Alma directory. "
-            f"Search or create the file and restart process."
-        )
+    except (FileNotFoundError, ValueError) as e:
+        sys.stderr.write(f"problem opening the file {e}")
         sys.exit()
+
     df_alma = xl2.parse(0)
     df_alma = df_alma.applymap(str)
 

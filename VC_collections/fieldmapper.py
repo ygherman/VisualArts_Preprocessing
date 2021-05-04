@@ -1,28 +1,3 @@
-"""
-SYNOPSIS
-    TODO helloworld [-h,--help] [-v,--verbose] [--version]
-
-DESCRIPTION
-    TODO This describes how to use this script. This docstring
-    will be printed by the script if there is an error or
-    if the user requests help (-h or --help).
-    
-PROJECT NAME:
-    helper_fuctions
-
-AUTHOR
-    Yael Vardina Gherman <Yael.VardinaGherman@nli.org.il>
-    Yael Vardina Gherman <gh.gherman@gmail.com>
-
-LICENSE
-    This script is in the public domain, free from copyrights or restrictions.
-
-VERSION
-    Date: 22/08/2019 15:54
-    
-    $
-"""
-
 catalog_field_mapper = {
     "אוסףפתוח": "ACCURALS",
     "ארכיוןפתוח": "ACCURALS",
@@ -162,7 +137,7 @@ catalog_field_mapper = {
     "IEלייצוא": "IE_TO_EXPORT",
     'פריט ייעודי לצרכי תוכן ויח"צ': 'פריט ייעודי לצרכי תוכן ויח"צ',
     "פריטייעודילצרכיתוכןויחצ": 'פריט ייעודי לצרכי תוכן ויח"צ',
-    "תאריךפקיעתהחיסיון": "תאריך פקיעת החיסיון",
+    "תאריךפקיעתהחיסיון": "CONFIDENTIALITY",
 }
 
 field_mapper_back = {
@@ -384,7 +359,7 @@ final_fields_back_mapper = {
     "NUMBER_OF_FILES": "מספר קבצים לאחר דיגיטציה",
     "SECONDARY_UNITITLE": "כותרת משנה",
     "TRANSLATED_UNITITLE": "כותרת מתורגמת",
-    "תאריך פקיעת החיסיון": "תאריך פקיעת החיסיון",
+    "CONFIDENTIALITY": "תאריך פקיעת החיסיון",
 }
 
 final_column_order = [

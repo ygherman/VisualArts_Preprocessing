@@ -18,7 +18,11 @@ from pymarc import XMLWriter, Record, Field
 from VC_collections.project import get_branch_colletionID
 from . import columns
 from .AuthorityFiles import Authority_instance
-from .fieldmapper import catalog_field_mapper, collection_field_mapper
+from .fieldmapper import (
+    catalog_field_mapper,
+    collection_field_mapper,
+    field_mapper_back, final_fields_back_mapper,
+)
 from .files import (
     create_directory,
     write_excel,
@@ -110,8 +114,12 @@ def create_xl_from_gspread(client: gspread.client.Client, file_id: str) -> dict:
 
     for sheet in worksheet_list:
         print(sheet)
-        if sheet.row_values(2) is None:
-            continue
+        try:
+            if sheet.row_values(2) is None:
+                continue
+        except Exception as e:
+            sys.stderr.write(f'exception {e} in sheet: {sheet.title}')
+
         dict_ds = sheet.get_all_records(head=1)
         df = pd.DataFrame(dict_ds)
         all_sheets_as_dfs[sheet.title] = df
@@ -318,6 +326,25 @@ def find_last_updated_gspread(client, collection_id):
     )
 
 
+def add_missing_cols_to_table(df):
+    logger = logging.getLogger(__name__)
+    missing_cols = list(set(final_fields_back_mapper.keys())-set(list(df.columns)))
+    for col in missing_cols:
+        df[col] = ''
+    logger.info(f"add missing column to table: {col}")
+
+    return df
+
+
+def file_907_exists(aleph_custom04_path, collection_id):
+    sys_num_file = Path(aleph_custom04_path) / f"{collection_id}_alma_sysno.xlsx"
+    # input(sys_num_file)
+    if sys_num_file.is_file():
+        return True
+    else:
+        return False
+
+
 class Collection:
     _project_branches = ["Architect", "Dance", "Design", "Theater"]
     _catalog_sheets = {
@@ -397,9 +424,13 @@ class Collection:
         """
         # turn index to string
         self.df_collection.index = self.df_collection.index.map(str)
+
+
         df_catalog = self.replace_table_column_names(
             remove_unnamed_cols(self.df_catalog), type="catalog"
         )
+
+
         df_collection = self.replace_table_column_names(
             remove_unnamed_cols(self.df_collection), type="collection"
         )
@@ -426,7 +457,6 @@ class Collection:
 
         try:
             combined_catalog = pd.concat([df_collection, df_catalog], axis=0, sort=True)
-            # combined_catalog = df_collection.reset_index()
 
         except:
 
@@ -644,6 +674,14 @@ class Collection:
             self.aleph_custom04_path,
         )
 
+        if (sys.argv[0]).endswith("preprocess_1.py"):
+
+            if not file_907_exists(self.aleph_custom04_path, collection_id):
+
+                sys.stderr.write(f"no {collection_id}_alma_sysno.xlsx exists. \n Run preprocess_0 first")
+
+                sys.exit()
+
         # set up logger for collection instance
         logger = logging.getLogger(__name__)
 
@@ -691,6 +729,7 @@ class Collection:
 
         self.full_catalog = self.make_one_table()
 
+
         self.all_tables = [
             type(getattr(self, name)).__name__
             for name in dir(self)
@@ -719,6 +758,8 @@ class Collection:
                 columns={self.df_final_data.columns[0]: "mms_id"}, inplace=True
             )
             self.df_final_data = self.df_final_data.set_index("mms_id")
+
+        self.full_catalog = add_missing_cols_to_table(self.full_catalog)
 
         # turn headers to English
         logger.info(f"Creating Excel: Saving file ")

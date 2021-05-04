@@ -744,6 +744,9 @@ def main():
     else:
         logger.error(f"[MEDIUM_FORMAT] no columns names [MEDIUM_FORMAT] in table!")
 
+    logger.info(f"[CONTAINER] Changing datatype CONTAINER column")
+    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].astype("int64")
+
     # logger.info(f"[DATE_CATALOGING] Checking and Validating DATE_CATALOGING column")
     # collection.full_catalog = check_cataloging_date(collection.full_catalog)
 
