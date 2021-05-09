@@ -3,3 +3,4 @@
 /files_table.py
 *.ini
 /.idea
+/mongoDB.ipynb
