@@ -4,3 +4,5 @@
 *.ini
 /.idea
 /mongoDB.ipynb
+/Data/Dance_file_ids.xlsx
+/Data/
