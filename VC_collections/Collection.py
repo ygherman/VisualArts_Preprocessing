@@ -21,7 +21,7 @@ from .AuthorityFiles import Authority_instance
 from .fieldmapper import (
     catalog_field_mapper,
     collection_field_mapper,
-    field_mapper_back, final_fields_back_mapper,
+    final_fields_back_mapper,
 )
 from .files import (
     create_directory,
