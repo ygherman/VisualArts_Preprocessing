@@ -111,9 +111,13 @@ def main():
         collection.df_final_data, Authority_instance.df_credits
     )
 
-    # create 300 (EXTENT) (היקף)
+    # create 535 (EXTENT) (היקף)
     logger.info("[MARC 535] Creating  MARC 535 - location of originals ")
     collection.df_final_data = marc.create_MARC_535(collection.df_final_data)
+
+    # TODO create 306 (EXTENT) (משך)
+    logger.info("[MARC 306] Creating  MARC 306 -  duration")
+    collection.df_final_data = marc.create_MARC_306(collection.df_final_data)
 
     # create 655 (ARCHIVAL_MATERIAL) (סוג חומר)
     logger.info("[MARC 655] Creating  MARC 655 - ARCHIVAL MATERIAL ")

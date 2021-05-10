@@ -634,6 +634,8 @@ def main():
 
     check_missing_rootids(collection)
 
+
+
     logger.info(f"[ACCESSRESTRICT] cheecking columns values")
 
     collection.full_catalog = check_values_against_cvoc(
@@ -647,7 +649,7 @@ def main():
     )
     collection.full_catalog = fill_default_ACCESSRESTIRCT(collection.full_catalog)
 
-    logger.info(f"[PUBLICATION_COUNTRY] cheecking columns values")
+    logger.info(f"[PUBLICATION_COUNTRY] checking columns values")
 
     collection.full_catalog = check_values_against_cvoc(
         collection.full_catalog,
@@ -671,23 +673,24 @@ def main():
         collection.full_catalog, collection.collection_id
     )
 
-    if "final" in collection.google_sheet_file_name.lower():
-        logger.info("[DATES] Validating dates")
-        collection.full_catalog = check_date_columns(collection.full_catalog)
-        logger.info("[DATES] cleaning dates - start date")
-        collection.full_catalog["DATE_START"] = (
-            collection.full_catalog["DATE_START"]
-            .astype(str)
-            .replace(r"\.0$", "", regex=True)
-            .apply(clean_date_format)
-        )
-        logger.info("[DATES] cleaning dates - end date")
-        collection.full_catalog["DATE_END"] = (
-            collection.full_catalog["DATE_END"]
-            .astype(str)
-            .replace(r"\.0$", "", regex=True)
-            .apply(clean_date_format)
-        )
+    logger.info("[DATES] Validating dates")
+    collection.full_catalog = check_date_columns(collection.full_catalog)
+    logger.info("[DATES] cleaning dates - start date")
+    collection.full_catalog["DATE_START"] = (
+        collection.full_catalog["DATE_START"]
+        .astype(str)
+        .replace(r"\.0$", "", regex=True)
+        .apply(clean_date_format)
+    )
+    logger.info("[DATES] cleaning dates - end date")
+    collection.full_catalog["DATE_END"] = (
+        collection.full_catalog["DATE_END"]
+        .astype(str)
+        .replace(r"\.0$", "", regex=True)
+        .apply(clean_date_format)
+    )
+
+
 
     logger.info(
         f"[COMBINED_CREATORS] CREATING COMBINED CREATORS for {collection.collection_id} , at: {datetime.now()}"
@@ -709,7 +712,9 @@ def main():
 
     logger.info(f"[BARCODE] Changing BARDODE column from string to integer")
 
-    collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(lambda x:x.rstrip(".0"))
+    collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(
+        lambda x: x.rstrip(".0")
+    )
 
     logger.info(f"[ARCHIVAL_MATERIAL] Starting to work on ARCHIVAL_MATERIAL column")
     collection.full_catalog = check_values_against_cvoc(
@@ -741,6 +746,11 @@ def main():
         )
     else:
         logger.error(f"[MEDIUM_FORMAT] no columns names [MEDIUM_FORMAT] in table!")
+
+    logger.info(f"[CONTAINER] Changing datatype CONTAINER column")
+    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].astype("str")
+    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].apply(lambda x: x.rstrip(".0"))
+
 
     # logger.info(f"[DATE_CATALOGING] Checking and Validating DATE_CATALOGING column")
     # collection.full_catalog = check_cataloging_date(collection.full_catalog)

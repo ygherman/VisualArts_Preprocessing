@@ -1,4 +1,5 @@
 import logging
+import sys
 from pathlib import Path
 from xml.dom import minidom
 
@@ -59,6 +60,7 @@ def check_custom04_file(file_path):
 
 
 def main():
+
     logger = logging.getLogger(__name__)
     collection = Collection.retrieve_collection()
     """ initialize logger for the logging file for that collection"""
@@ -87,4 +89,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    while True:
+        main()
+        batch = input("Run another collection through Preprocess-1? (Y/N) ")
+        if batch.strip().lower() != "y":
+            sys.stdout.write("Ending run!")
+            sys.exit()

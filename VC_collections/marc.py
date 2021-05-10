@@ -1315,7 +1315,6 @@ def create_MARC_260_008_date(df, start_date, end_date, text_date):
     $e - Place of manufacture (R)
     $g - Date of manufacture (R)
 
-    :param date_cols:
     :param df: the entire table
     :return: the new data frame with the new MARC 008 encoded Field
     """
@@ -1678,9 +1677,8 @@ def create_MARC_600(collection):
     Subject added entry in which the entry element is a personal name.
     First Indicator - Type of personal name entry element = 1 - Surname
 
-    :param df:
+    :param collection: the entire collection instance
     :return:
-    :param: df: the dataframe
 
     """
     df = collection.df_final_data

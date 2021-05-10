@@ -34,7 +34,6 @@ def split_creators_by_type(df, col_name):
     :param df: The original Dataframe
     :param col_name:  the column name which contains the creators
     :return: df: the modified dataframe with two new columns - creators_pers and creators corps
-    @param mode:
     """
 
     for index, row in df.iterrows():

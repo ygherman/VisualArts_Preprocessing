@@ -26,6 +26,8 @@ from pathlib import Path
 import pandas as pd
 
 # ROOTID finder
+import xlsxwriter
+
 from .columns import drop_col_if_exists
 from .value import find_nth
 
@@ -85,12 +87,10 @@ def get_alma_sid(custom04_path, collectionID, df):
     # parse sysno file
     try:
         xl2 = pd.ExcelFile(alma_sysno_file)
-    except FileNotFoundError:
-        sys.stderr.write(
-            f"The file does [{alma_sysno_file}] not exist in the custom04\Alma directory. "
-            f"Search or create the file and restart process."
-        )
+    except (FileNotFoundError, ValueError) as e:
+        sys.stderr.write(f"problem opening the file {e}")
         sys.exit()
+
     df_alma = xl2.parse(0)
     df_alma = df_alma.applymap(str)
 
@@ -176,12 +176,11 @@ def get_branch_colletionID(
     return CMS, branch, collectionID
 
 
-def get_root_index_and_title(df, index):
+def get_root_index_and_title(index: str, df: pd.DataFrame) -> tuple:
     """
         Get the title of the parent record
-    :param df: The original dataframe,
-    :param df: The original dataframe,
-    :param mms_id:
+    :param index: the index for which the rootid (parent id) should be looked for.
+    :param df: The whole dataframe
     :return:
     """
     logger = logging.getLogger(__name__)
