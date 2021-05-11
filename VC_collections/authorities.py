@@ -624,7 +624,7 @@ def fix_original(col, error_words, new_values):
     for err in error_words:
         if len(err) > 0:
             ret, col = fix_values_in_column(
-                col, err, find_new_value(err, error_words2possible_new_val)
+                col, err.strip(), find_new_value(err, error_words2possible_new_val)
             )
             logger.debug(f"[VOC] error value: [{err}] with correct value: [{ret}]")
             if ret is not None:
@@ -635,7 +635,7 @@ def fix_original(col, error_words, new_values):
 def check_values_against_cvoc(df: pd.DataFrame, col_name: str, new_values: pd.Series):
     logger = logging.getLogger(__name__)
     test_list = [x.split(";") for x in df[col_name].tolist()]
-    vals_to_check = [item for sublist in test_list for item in sublist]
+    vals_to_check = [item.strip() for sublist in test_list for item in sublist]
     vals_to_check = list(set(vals_to_check))
 
     values_not_found, df[col_name] = fix_original(

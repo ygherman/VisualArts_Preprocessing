@@ -634,8 +634,6 @@ def main():
 
     check_missing_rootids(collection)
 
-
-
     logger.info(f"[ACCESSRESTRICT] cheecking columns values")
 
     collection.full_catalog = check_values_against_cvoc(
@@ -690,8 +688,6 @@ def main():
         .apply(clean_date_format)
     )
 
-
-
     logger.info(
         f"[COMBINED_CREATORS] CREATING COMBINED CREATORS for {collection.collection_id} , at: {datetime.now()}"
     )
@@ -735,7 +731,7 @@ def main():
         collection.full_catalog = check_values_against_cvoc(
             collection.full_catalog,
             "MEDIUM_FORMAT",
-            Authority_instance.media_format_mapping_dict,
+            Authority_instance.media_format_search_dict,
         )
         logger.info(f"[MEDIUM_FORMAT] Creating Media/Format Match File")
         create_match_file(
@@ -748,9 +744,12 @@ def main():
         logger.error(f"[MEDIUM_FORMAT] no columns names [MEDIUM_FORMAT] in table!")
 
     logger.info(f"[CONTAINER] Changing datatype CONTAINER column")
-    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].astype("str")
-    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].apply(lambda x: x.rstrip(".0"))
-
+    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].astype(
+        "str"
+    )
+    collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].apply(
+        lambda x: x.rstrip(".0")
+    )
 
     # logger.info(f"[DATE_CATALOGING] Checking and Validating DATE_CATALOGING column")
     # collection.full_catalog = check_cataloging_date(collection.full_catalog)

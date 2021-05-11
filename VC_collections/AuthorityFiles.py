@@ -103,10 +103,15 @@ def order_media_format(df_media_format_auth):
         index=media_format_auth["MEDIA_FORMAT"].values,
     ).to_dict()
 
+    media_format_search_dict = pd.Series(
+        media_format_auth["MEDIA_FORMAT"].values,
+        index=media_format_auth["MEDIA_FORMAT"].values,
+    ).to_dict()
+
     for key, value in media_format_mapping_dict.items():
         media_format_mapping_dict[key] = value
 
-    return media_format_auth, media_format_mapping_dict
+    return media_format_auth, media_format_mapping_dict, media_format_search_dict
 
 
 def order_archival_material(df_arch_mat_auth):
@@ -281,9 +286,11 @@ class Authority:
 
         df_level, level_cols = create_df_from_gs(spreadsheet, "רמת תיאור")
 
-        self.df_media_format_auth, self.media_format_mapping_dict = order_media_format(
-            df_media_format_auth
-        )
+        (
+            self.df_media_format_auth,
+            self.media_format_mapping_dict,
+            self.media_format_search_dict,
+        ) = order_media_format(df_media_format_auth)
         (
             self.df_arch_mat_auth,
             self.df_arch_mat_search,

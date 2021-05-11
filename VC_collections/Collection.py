@@ -118,7 +118,7 @@ def create_xl_from_gspread(client: gspread.client.Client, file_id: str) -> dict:
             if sheet.row_values(2) is None:
                 continue
         except Exception as e:
-            sys.stderr.write(f'exception {e} in sheet: {sheet.title}')
+            sys.stderr.write(f"exception {e} in sheet: {sheet.title}")
 
         dict_ds = sheet.get_all_records(head=1)
         df = pd.DataFrame(dict_ds)
@@ -328,9 +328,9 @@ def find_last_updated_gspread(client, collection_id):
 
 def add_missing_cols_to_table(df):
     logger = logging.getLogger(__name__)
-    missing_cols = list(set(final_fields_back_mapper.keys())-set(list(df.columns)))
+    missing_cols = list(set(final_fields_back_mapper.keys()) - set(list(df.columns)))
     for col in missing_cols:
-        df[col] = ''
+        df[col] = ""
     logger.info(f"add missing column to table: {col}")
 
     return df
@@ -425,11 +425,9 @@ class Collection:
         # turn index to string
         self.df_collection.index = self.df_collection.index.map(str)
 
-
         df_catalog = self.replace_table_column_names(
             remove_unnamed_cols(self.df_catalog), type="catalog"
         )
-
 
         df_collection = self.replace_table_column_names(
             remove_unnamed_cols(self.df_collection), type="collection"
@@ -678,7 +676,9 @@ class Collection:
 
             if not file_907_exists(self.aleph_custom04_path, collection_id):
 
-                sys.stderr.write(f"no {collection_id}_alma_sysno.xlsx exists. \n Run preprocess_0 first")
+                sys.stderr.write(
+                    f"no {collection_id}_alma_sysno.xlsx exists. \n Run preprocess_0 first"
+                )
 
                 sys.exit()
 
@@ -728,7 +728,6 @@ class Collection:
                 pass
 
         self.full_catalog = self.make_one_table()
-
 
         self.all_tables = [
             type(getattr(self, name)).__name__
