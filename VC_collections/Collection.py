@@ -15,6 +15,7 @@ from alphabet_detector import AlphabetDetector
 from oauth2client.service_account import ServiceAccountCredentials
 from pymarc import XMLWriter, Record, Field
 
+import preprocess_0
 from VC_collections.project import get_branch_colletionID
 from . import columns
 from .AuthorityFiles import Authority_instance
@@ -630,8 +631,7 @@ class Collection:
         self.dt_now = datetime.now().strftime("%Y%m%d")
 
         # create directory and sub-folders for collection
-        self.BASE_PATH = (
-            Path("C:/Users/Yaelg/Google Drive/National_Library/Python")
+        self.BASE_PATH = (Path.cwd().parent.absolute()
             / (branch)
             / collection_id
         )
@@ -674,13 +674,13 @@ class Collection:
 
         if (sys.argv[0]).endswith("preprocess_1.py"):
 
-            if not file_907_exists(self.aleph_custom04_path, collection_id):
+            while not file_907_exists(self.aleph_custom04_path, collection_id):
 
                 sys.stderr.write(
-                    f"no {collection_id}_alma_sysno.xlsx exists. \n Run preprocess_0 first"
+                    f"no {collection_id}_alma_sysno.xlsx exists. \n Running preprocess_0 first"
                 )
 
-                sys.exit()
+                preprocess_0.main(collection_id=self.collection_id, branch=self.branch)
 
         # set up logger for collection instance
         logger = logging.getLogger(__name__)

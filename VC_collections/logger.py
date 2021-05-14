@@ -3,6 +3,7 @@ from pathlib import Path
 
 
 # class VC_Logger(logging.LoggerAdapter):
+from VC_collections.files import create_directory
 
 
 def show_loggers():
@@ -38,15 +39,39 @@ def initialize_logger(branch, collection_id):
     :param collection_id:
     """
     # show_loggers()
-
+    if not branch.startswith("VC-"):
+        branch = "VC-" + branch
     reports_path = Path.cwd().parent / branch / collection_id / "Data" / "reports"
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        filename=reports_path / (collection_id + ".log"),
-        format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
-        datefmt="%y-%m-%d %H:%M",
-    )
+    try:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            filename=reports_path / (collection_id + ".log"),
+            format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+            datefmt="%y-%m-%d %H:%M",
+        )
+    except FileNotFoundError:
+        BASE_PATH = (Path.cwd().parent.absolute()
+                          / (branch)
+                          / collection_id
+                          )
+
+        # initialize directory with all folder and sub-folders for the collection
+        (
+            data_path,
+            data_path_raw,
+            data_path_processed,
+            data_path_reports,
+            copyright_path,
+            digitization_path,
+            authorities_path,
+            aleph_custom21_path,
+            aleph_manage18_path,
+            aleph_custom04_path,
+        ) = create_directory("Alma", BASE_PATH)
+
+        with open(reports_path / (collection_id + ".log"), 'a+'):
+            pass
     # logging.basicConfig(level=logging.INFO,
     #                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
     #                     datefmt='%y-%m-%d %H:%M',

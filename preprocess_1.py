@@ -1,3 +1,4 @@
+import json
 import sys
 import timeit
 from xml.dom import minidom
@@ -511,7 +512,7 @@ def check_date_columns(df):
                     early_date, late_date = extract_years_from_text(row["DATE"].strip())
                 except:
                     dates_to_correct[index] = row["DATE"]
-                    sys.stderr.write(f"Problem with index {index}")
+                    sys.stderr.write(f"Problem with index {index}\n")
                 try:
                     if early_date is not None and late_date is not None:
                         df.loc[index, "DATE_START"] = early_date.strip().lstrip("' ")
@@ -548,13 +549,15 @@ def find_907_number_of_file(dict_907):
 
 
 def add_number_of_files(collection):
-    rosetta_file_path = lookup_rosetta_file(
-        collection.digitization_path, collection.collection_id
-    )
-    rosetta_file = minidom.parse(rosetta_file_path)
+    # rosetta_file_path = lookup_rosetta_file(
+    #     collection.digitization_path, collection.collection_id
+    # )
+    # rosetta_file = minidom.parse(rosetta_file_path)
 
     df = collection.full_catalog
-    rosetta_dict = create_907_dict(rosetta_file)
+    with open(r'Data\VIS_907.json') as json_file:
+        rosetta_dict = json.load(json_file)
+
     for index, row in df.iterrows():
         try:
             if index == np.nan:
