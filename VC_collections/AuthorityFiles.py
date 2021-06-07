@@ -22,7 +22,7 @@ VERSION
     
     $
 """
-
+import os
 from pathlib import Path
 
 import gspread
@@ -223,9 +223,7 @@ class Authority:
             )
         except OSError as e:
             creds = ServiceAccountCredentials.from_json_keyfile_name(
-                r"C:\Users\Yaelg\Google "
-                r"Drive\National_Library\Python\VC_Preprocessing"
-                r"\google_drive_api\client_secret.json",
+                r"..\google_drive_api\client_secret.json",
                 scope,
             )
         client = gspread.authorize(creds)

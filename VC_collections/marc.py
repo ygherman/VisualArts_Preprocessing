@@ -45,21 +45,6 @@ def create_MARC_initial_008(df):
     return df
 
 
-# TODO this is wrong, should go to another place. 091 is the wrong field
-def create_MARC_091(df):
-    """
-        converts the ['ברקןד'] field to MARC21 091 encoded field
-    :param df: The original Dataframe
-    :return: The Dataframe with the new 091 field
-    """
-    df["ברקוד"] = df["ברקוד"].astype(str).replace(".0$", "", regex=True)
-    df["091"] = df["ברקוד"].apply(
-        lambda x: "$$a" + str(x).rstrip(".0") if str(x).strip() != "" else ""
-    )
-    df = drop_col_if_exists(df, "ברקוד")
-    return df
-
-
 def create_MARC_093(df, collection_id):
     """add prefix '$$a' to the value
 
@@ -80,22 +65,8 @@ def create_MARC_093(df, collection_id):
             f"Please enter the hebrew name of the collection {collection_id}: \n"
         )
 
-    try:
-        collection_name_eng = Authority_instance.df_credits.loc[
-            collection_id, "שם הארכיון באנגלית"
-        ]
-    except:
-        sys.stderr.write(
-            f"There is no credit in the credits table for collection {collection_id}"
-        )
-        collection_name_eng = input(
-            f"Please enter the english name of the collection {collection_id}: \n"
-        )
+    df["093"] = df["093"] + "$$d" + collection_name_heb
 
-    df["093_1"] = df["093"] + "$$d" + collection_name_heb
-    df["093_2"] = df["093"] + "$$d" + collection_name_eng
-
-    df = drop_col_if_exists(df, "093")
     df = drop_col_if_exists(df, "911")
     df = drop_col_if_exists(df, "שם האוסף")
 
@@ -204,13 +175,11 @@ def create_MARC_245(df):
         )
         df["24510"] = df["24510"].astype(str) + df["כותרת משנה"]
 
-    if column_exists(df, "כותרת ערבית"):
-        df["כותרת ערבית"] = df["כותרת ערבית"].apply(
+    if len(df[df["כותרת ערבית"] != '']):
+        col_name_246 = last_index_of_reoccurring_column(df, "24631")
+        df[col_name_246] = df["כותרת ערבית"].apply(
             lambda x: f"$$a{str(x)}$$9ara" if str(x).strip().lstrip() != "" else ""
         )
-
-        col_name_246 = last_index_of_reoccurring_column(df, "24631")
-        df["24631"] = df["24631"].astype(str) + df["כותרת ערבית"]
 
     return df
 
@@ -332,6 +301,8 @@ def create_MARC_500(df):
             new_value = (
                 new_value + "מקומות המוזכרים בתיק: " + row["מילות מפתח_מקומות"] + "; "
             )
+        if "ברקוד" in list(df.columns.values) and row["ברקוד"] != "":
+            new_value = new_value + "ברקוד: " + str(row["ברקוד"]) + "; "
 
         if new_value == "$$a":
             new_value = ""
@@ -360,7 +331,7 @@ def create_MARC_500s_4collection(df):
         lambda x: "$$aסוג האוסף: " + str(x).strip() if str(x).strip() != "" else ""
     )
     df = explode_col_to_new_df(df, "581")
-    cols_581 = [col for col in list(df.columns) if "581" in col]
+    cols_581 = [col for col in list(df.columns) if "581" in str(col)]
     for col_name in cols_581:
         df[col_name] = df[col_name].apply(
             lambda x: "$$a" + str(x).strip() if str(x).strip() != "" else ""
@@ -399,10 +370,6 @@ def create_MARC_942(df, collection_id):
     if "בעלים נוכחי" in list(df.columns):
         if df.loc[collection_index, "בעלים נוכחי"] != "":
             _a = df.loc[collection_index, "בעלים נוכחי"]
-
-    elif "מיקום פיזי" in list(df.columns):
-        if df.loc[collection_index, "מיקום פיזי"] != "":
-            _a = df.loc[collection_index, "מיקום פיזי"]
 
     else:
         return df
@@ -752,63 +719,57 @@ def create_710_current_owner_val(x):
     return x
 
 
-def create_MARC_710_current_owner(collection, df_credits):
-    lang = ""
-    df = collection.df_final_data
-    logger = logging.Logger(__name__)
-    current_owner_val = df.loc[
-        df.loc[df["351"] == "$$cFonds Record"].index[0], "בעלים נוכחי"
-    ]
-    if "בעלים נוכחי" in list(df.columns) and current_owner_val != "":
-        logger.info(
-            f"There is current owner:[{current_owner_val}] for collection: [{collection.collection_id}]"
-        )
-        current_owner_val = current_owner_val.split(";")
-        current_owner_val = [
-            "$$a" + create_710_current_owner_val(x)
-            for x in current_owner_val
-            if x != ""
-        ]
-        if len(current_owner_val) > 1:
-            current_owner_val = ";".join(current_owner_val)
-        else:
-            current_owner_val = "".join(current_owner_val)
-        df["7102"] = current_owner_val
-
-        # df = drop_col_if_exists(df, "בעלים נוכחי")
-    else:
-        logger.info(
-            "[710 current owner] Current owner column doesn't exist.\n"
-            "Getting current owner from Credits table."
-        )
-
-        if (
-            df_credits.loc[collection.collection_id, "מיקום הפקדה עבור בעלים נוכחי"]
-            != ""
-        ):
-            df["בעלים נוכחי"] = df_credits.loc[
-                collection.collection_id, "מיקום הפקדה עבור בעלים נוכחי"
-            ]
-            df["7102"] = (
-                df["7102"].astype(str)
-                + ";"
-                + df["בעלים נוכחי"].apply(
-                    lambda x: "$$a" + create_710_current_owner_val(x) if x != "" else ""
-                )
-            )
-        else:
-            logger.error(f"No מיקום הפקדה for collection: {collection.collection_id}")
-
-    return df
+# def create_MARC_710_current_owner(df):
+#    logger = logging.Logger(__name__)
+#
+#     if "בעלים נוכחי" in list(df.columns):
+#         current_owner_val =
+#
+#         current_owner_val = current_owner_val.split(";")
+#         current_owner_val = [
+#             "$$a" + create_710_current_owner_val(x)
+#             for x in current_owner_val
+#             if x != ""
+#         ]
+#         if len(current_owner_val) > 1:
+#             current_owner_val = ";".join(current_owner_val)
+#         else:
+#             current_owner_val = "".join(current_owner_val)
+#         df["7102"] = current_owner_val
+#
+#         # df = drop_col_if_exists(df, "בעלים נוכחי")
+#     else:
+#         logger.info(
+#             "[710 current owner] Current owner column doesn't exist.\n"
+#             "Getting current owner from Credits table."
+#         )
+#
+#         if (
+#             df_credits.loc[collection.collection_id, "מיקום הפקדה עבור בעלים נוכחי"]
+#             != ""
+#         ):
+#             df["בעלים נוכחי"] = df_credits.loc[
+#                 collection.collection_id, "מיקום הפקדה עבור בעלים נוכחי"
+#             ]
+#             df["7102"] = (
+#                 df["7102"].astype(str)
+#                 + ";"
+#                 + df["בעלים נוכחי"].apply(
+#                     lambda x: "$$a" + create_710_current_owner_val(x) if x != "" else ""
+#                 )
+#             )
+#         else:
+#             logger.error(f"No מיקום הפקדה for collection: {collection.collection_id}")
+#
+#     return df
 
 
-def create_MARC_700_710(collection, df_credits):
+def create_MARC_700_710(df):
     """
     create new column in dataframe for all the rest of creators
     :param: df: the dataframe
     """
 
-    df = collection.df_final_data
     df["7001"] = df["יוצרים אישים"]
     df["7102"] = df["יוצרים מוסדות"]
 
@@ -820,10 +781,10 @@ def create_MARC_700_710(collection, df_credits):
     df["7001"] = df["7001"].astype("str")
     df["7102"] = df["7102"].astype("str")
 
-    df = create_MARC_710_current_owner(collection, df_credits)
-
     df = remove_duplicate_in_column(df, "7001")
     df = remove_duplicate_in_column(df, "7102")
+
+    current_owner = "$$a" + create_710_current_owner_val(df["בעלים נוכחי"].tolist()[0])
 
     # check there are no duplicates in 100 and 700
     for index, row in df.iterrows():
@@ -851,6 +812,9 @@ def create_MARC_700_710(collection, df_credits):
 
     df = remove_duplicate_in_column(df, "7001")
     df = remove_duplicate_in_column(df, "7102")
+
+    # adding current owner to columns 710
+    df["7102"] = current_owner + ";" + df["7102"].astype(str)
 
     df = explode_col_to_new_df(df, "7001")
     df = explode_col_to_new_df(df, "7102")
@@ -908,17 +872,11 @@ def create_MARC_300(df):
     :param df: The original Dataframe
     :return:The Dataframe with the new 351 field
     """
-    try:
-        col = [x for x in list(df.columns.values) if "היקף" in x][0]
-    except NameError:
-        print("col variable not defined")
-        pass
-    else:
 
-        df["300"] = df[col].apply(split_MARC_300)
-        df = remove_duplicate_in_column(df, "300")
-        df = explode_col_to_new_df(df, "300")
-        df = drop_col_if_exists(df, "300")
+    df["300"] = df["היקף החומר"].apply(split_MARC_300)
+    df = remove_duplicate_in_column(df, "300")
+    df = explode_col_to_new_df(df, "300")
+    df = drop_col_if_exists(df, "300")
 
     return df
 
@@ -937,8 +895,9 @@ def create_MARC_306(df):
     :return:The Dataframe with the new 306 field
     """
     if column_exists(df, "משך"):
-        df["306"] = df["משך"].str.replace(":", "").strip()
-        df["306"] = df.apply(lambda x: "$a" + x)
+        df["306"] = df["משך"].str.replace(":", "").apply(lambda x: str(x).strip() if x != "" else '')
+        df["306"] = df["306"].apply(lambda x: "$$a" + x if x != '' else '')
+        df = drop_col_if_exists(df, "משך")
     return df
 
 
@@ -1305,7 +1264,7 @@ def create_MARC_260_044_008_countries(df, country_col):
     return df
 
 
-def create_MARC_260_008_date(df, start_date, end_date, text_date):
+def create_MARC_260_008_date(df, start_date_col, end_date_col, text_date_col):
     """
     fuction's input is the entire table as a dataframe and constructs the 260 field according to the POST_COPYRIGHT
     file.
@@ -1315,20 +1274,23 @@ def create_MARC_260_008_date(df, start_date, end_date, text_date):
     $e - Place of manufacture (R)
     $g - Date of manufacture (R)
 
+    :param text_date_col:
+    :param end_date_col:
+    :param start_date_col:
     :param df: the entire table
     :return: the new data frame with the new MARC 008 encoded Field
     """
 
     logger = logging.getLogger(__name__)
 
-    df[start_date] = (
-        df[start_date]
+    df[start_date_col] = (
+        df[start_date_col]
         .astype(str)
         .replace(r"\.0$", "", regex=True)
         .apply(clean_date_format)
     )
-    df[end_date] = (
-        df[end_date]
+    df[end_date_col] = (
+        df[end_date_col]
         .astype(str)
         .replace(r"\.0$", "", regex=True)
         .apply(clean_date_format)
@@ -1340,26 +1302,28 @@ def create_MARC_260_008_date(df, start_date, end_date, text_date):
     the date, and in which MARC field the full notmalized -date (YYYY-MM-DD) can be recorded
     ****************************************************************************************************
     """
-    df[start_date] = df[start_date].apply(lambda x: x[:4])
-    df[end_date] = df[end_date].apply(lambda x: x[:4])
-    df["260"] = df[text_date].apply(lambda x: "$$g" + str(x) if str(x) != "" else "")
+    df[start_date_col] = df[start_date_col].apply(lambda x: x[:4])
+    df[end_date_col] = df[end_date_col].apply(lambda x: x[:4])
+    df["260"] = df[text_date_col].apply(lambda x: "$$g" + str(x) if str(x) != "" else "")
 
     # update 008 field
     for index, row in df.iterrows():
 
         early_date, late_date = check_date_values_in_row(
-            row[start_date], row[end_date], row[text_date], index
+            row[start_date_col], row[end_date_col], row[text_date_col], index
         )
-        if early_date is None:
+        if early_date is None or late_date is None:
             sys.stderr.write(
                 f"[DATE] Error with date - check MMS ID {index}, record call number {df.loc[index, 'סימול']}"
             )
 
-        date = f"$$c{str(row[start_date])}-{str(row[end_date])}"
+        date = f"$$c{early_date}-{late_date}"
         try:
             df.loc[index, "260"] = row["260"] + date
         except Exception as e:
             print(e)
+
+        df.loc[index, "008"] = row["008"][:7] + str(early_date) + str(late_date) + row["008"][15:]
 
     return df
 
@@ -1378,7 +1342,15 @@ def create_MARC_520(df):
     df["5202"] = df["תיאור"].apply(
         lambda x: "$$a" + str(x).strip().replace("\n", " ") if str(x) != "" else ""
     )
+
+    df["520"] = df["תקציר"].apply(
+        lambda x: "$$a" + str(x).strip().replace("\n", " ") + "$$9" + check_lang(x)
+        if str(x) != ""
+        else ""
+    )
     df = drop_col_if_exists(df, "תיאור")
+    df = drop_col_if_exists(df, "תקציר")
+
     return df
 
 
@@ -1428,7 +1400,7 @@ def create_MARC_773(df):
     for index, row in df.iterrows():
         if "$$cFonds Record" in row["351"]:
             continue
-        root_index, root_title = get_root_index_and_title(df, index)
+        root_index, root_title = get_root_index_and_title(index,df)
         df.loc[index, "77318"] = f"$$t{root_title}$$w{root_index}"
     return df
 
@@ -1760,7 +1732,9 @@ def create_MARC_630(collection):
 
         df = drop_col_if_exists(df, "63004")
 
-    return df
+        collection.df_final_data = df
+
+    return collection
 
 
 def update_008_no_linguistic_content(val_008):
@@ -2180,22 +2154,21 @@ def add_copyright_field_from_alma(collection):
     return collection
 
 
-def add_MARC_597(collection):
-    df_597 = Authority_instance.df_credits
-    collection.df_final_data["597"] = (
-        f"$$a{str(df_597.loc[collection.collection_id, 'קרדיט עברית']).strip()}"
-        f"$$a{str(df_597.loc[collection.collection_id, 'קרדיט אנגלית']).strip()}"
-    )
+def add_MARC_597(df):
 
-    return collection
+    df["597"] = "$$a" + df["קרדיט עברית"].astype(str) + "$$a" + df["קרדיט אנגלית"].astype(str)
+    df = drop_col_if_exists(df, "קרדיט עברית")
+    df = drop_col_if_exists(df, "קרדיט אנגלית")
+
+    return df
 
 
 def export_MARCXML_final_table(collection):
     logger = logging.getLogger()
     logger.info(f"[MARCXML] create final MARC XML file for {collection.collection_id}")
-    df_final_cols = [
+    df_final_cols = sorted([
         x for x in list(collection.df_final_data.columns) if x[0].isdigit()
-    ] + ["LDR"]
+    ] + ["LDR"])
     collection.marc_data = collection.df_final_data[df_final_cols]
 
     counter, run_time = collection.create_MARC_XML()
@@ -2253,19 +2226,19 @@ def create_MARC_590_sponsors(df, branch):
         f"590_{str(col_number + 3)}"
     ] = "$$asponsor: The Judaica collection at the Harvard University Library"
 
-    if branch == "Architect":
+    if branch == "VC-Architect":
         df[
             f"590_{str(col_number + 4)}"
         ] = "$$asponsor: Bezalel Academy of Arts and Design, Jerusalem"
 
-    if branch == "Dance":
+    if branch == "VC-Dance":
         df[f"590_{str(col_number + 4)}"] = "$$asponsor: Batsheva Dance Company"
 
-    if branch == "Design":
+    if branch == "VC-Design":
         df[
             f"590_{str(col_number + 4)}"
         ] = "$$asponsor: Shenkar - Engineering. Design. Art."
 
-    if branch == "Theater":
+    if branch == "VC-Theater":
         df[f"590_{str(col_number + 4)}"] = "$$sponsor: University of Haifa"
     return df

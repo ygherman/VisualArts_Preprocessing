@@ -288,13 +288,19 @@ def map_field_names_to_english(col_names: list, mapper: dict) -> list:
 
 
 def add_current_owner(df_collection, df_credits, collection_id):
+
     if "סימול האוסף" in list(df_collection.columns):
         df_collection = df_collection.set_index("סימול האוסף")
     elif "סימול הארכיון" in list(df_collection.columns):
         df_collection = df_collection.set_index("סימול הארכיון")
+
+    desc_level_value = df_collection.loc[collection_id, "רמת תיאור"]
+
     if (
         "בעלים נוכחי" in list(df_collection.columns)
-        and df_collection.loc[df_collection["רמת תיאור"] == "אוסף", "בעלים נוכחי"][0]
+        and df_collection.loc[
+            df_collection["רמת תיאור"] == desc_level_value, "בעלים נוכחי"
+        ][0]
         != ""
     ):
         if df_credits.loc[collection_id, "מיקום הפקדה עבור בעלים נוכחי"] != "":
@@ -631,10 +637,7 @@ class Collection:
         self.dt_now = datetime.now().strftime("%Y%m%d")
 
         # create directory and sub-folders for collection
-        self.BASE_PATH = (Path.cwd().parent.absolute()
-            / (branch)
-            / collection_id
-        )
+        self.BASE_PATH = Path.cwd().parent.absolute() / (branch) / collection_id
 
         # initialize directory with all folder and sub-folders for the collection
         (
@@ -714,18 +717,18 @@ class Collection:
             self.df_collection = add_current_owner(
                 self.df_collection, Authority_instance.df_credits, self.collection_id
             )
-            self.df_personalities = remove_instructions_row(
-                remove_empty_rows(self.dfs["אישים"])
-            )
-            self.df_corporation = remove_instructions_row(
-                remove_empty_rows(self.dfs["מוסדות"])
-            )
-            try:
-                if self.branch != "VC-Design" and self.branch != "Design":
-                    work_col = [x for x in self.dfs.keys() if "יצירות" in x][0]
-                    self.df_works = self.dfs[work_col]
-            except:
-                pass
+            # self.df_personalities = remove_instructions_row(
+            #     remove_empty_rows(self.dfs["אישים"])
+            # )
+            # self.df_corporation = remove_instructions_row(
+            #     remove_empty_rows(self.dfs["מוסדות"])
+            # )
+            # try:
+            #     if self.branch != "VC-Design" and self.branch != "Design":
+            #         work_col = [x for x in self.dfs.keys() if "יצירות" in x][0]
+            #         self.df_works = self.dfs[work_col]
+            # except:
+            #     pass
 
         self.full_catalog = self.make_one_table()
 

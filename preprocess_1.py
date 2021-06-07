@@ -3,6 +3,7 @@ import sys
 import timeit
 from xml.dom import minidom
 
+import pandas as pd
 from alphabet_detector import AlphabetDetector
 from df2gspread import df2gspread as d2g
 
@@ -463,11 +464,17 @@ def add_normal_dates_to_section_record(df, collection_id):
         df.loc[collection_id, "DATE_END"]
     ):
         date = df.loc[collection_id, "DATE"]
-        pattern = re.compile(r"\d{4}")
-        years = re.findall(pattern, date)
-        years = sorted([int(year) for year in years])
-        df.loc[collection_id, "DATE_START"] = years[0]
-        df.loc[collection_id, "DATE_END"] = years[1]
+        if date != "":
+            pattern = re.compile(r"\d{4}")
+            years = re.findall(pattern, date)
+            years = sorted([int(year) for year in years])
+            df.loc[collection_id, "DATE_START"] = years[0]
+            df.loc[collection_id, "DATE_END"] = years[1]
+        else:
+            logger.error(
+                f"Date is missing for collection level! please correct and re-run!"
+            )
+            sys.exit()
 
     return df
 
@@ -555,7 +562,7 @@ def add_number_of_files(collection):
     # rosetta_file = minidom.parse(rosetta_file_path)
 
     df = collection.full_catalog
-    with open(r'Data\VIS_907.json') as json_file:
+    with open(r"Data\VIS_907.json") as json_file:
         rosetta_dict = json.load(json_file)
 
     for index, row in df.iterrows():
@@ -581,12 +588,39 @@ def add_number_of_files(collection):
     return collection
 
 
+def add_current_owner(df: pd.DataFrame, collection_id: str) -> pd.DataFrame:
+    """
+        Function adds fills column CURRENT OWNER of the given Dataframe with the relevant CURRENT OWNER from the
+        df_credits table in the מקור נתונים.
+        https://docs.google.com/spreadsheets/d/1736sL9unbiOMbcrIYgSkCSvhU2-LCthSLVtYLPSpZ98/edit#gid=593800684
+    :param df: The full catalog Dataframe
+    :param collection_id: the call number, if of the catalog.
+    :return: The Dataframe with the filled CURRENT OWNER data
+    """
+    if collection_id in Authority_instance.df_credits.index:
+        if Authority_instance.df_credits.loc[collection_id, "מיקום הפקדה עבור בעלים נוכחי"] == '':
+            return df
+        else:
+            df["CURRENT_OWNER"] = Authority_instance.df_credits.loc[collection_id, "מיקום הפקדה עבור בעלים נוכחי"]
+    else:
+        logger.error(f'[CURRENT OWNER] No current owner for: {collection_id}')
+    return df
+
+
+def add_credits(df, collection_id):
+    if Authority_instance.df_credits.loc[collection_id, "קרדיט עברית"] == '':
+        sys.stderr.write(f'No credit in the credits table for {collection_id} Archive\n'
+                         f'Please correct and re-run!')
+        sys.exit()
+    df["CREDIT_HEB"] = Authority_instance.df_credits.loc[collection_id, "קרדיט עברית"]
+    df["CREDIT_ENG"] = Authority_instance.df_credits.loc[collection_id, "קרדיט אנגלית"]
+    return df
+
+
 def main():
     start_time = timeit.default_timer()
 
     """ get branch and  collection ID to work on and create a Collection instance """
-    # CMS, branch, collection_id = get_branch_colletionID()
-    # collection = Collection(CMS, branch, collection_id)
 
     collection = retrieve_collection()
     """ initialize logger for the logging file for that collection"""
@@ -709,6 +743,10 @@ def main():
     collection = create_authorities_report(collection, "GEO")
     collection = create_authorities_report(collection, "WORKS")
 
+    logger.info(f'[CURRENT_OWNER] filling CURRENT OWNER columns for the {collection.collection_id} catalog')
+    collection.full_catalog = add_current_owner(collection.full_catalog,
+                                                collection_id=collection.collection_id)
+
     logger.info(f"[BARCODE] Changing BARDODE column from string to integer")
 
     collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(
@@ -753,6 +791,10 @@ def main():
     collection.full_catalog["CONTAINER"] = collection.full_catalog["CONTAINER"].apply(
         lambda x: x.rstrip(".0")
     )
+
+    logger.info(f'[CREDIT] Add credits to the collection')
+    collection.full_catalog = add_credits(collection.full_catalog, collection.collection_id)
+
 
     # logger.info(f"[DATE_CATALOGING] Checking and Validating DATE_CATALOGING column")
     # collection.full_catalog = check_cataloging_date(collection.full_catalog)

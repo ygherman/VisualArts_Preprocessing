@@ -1,5 +1,4 @@
 from unittest import TestCase, main
-
 import pandas as pd
 
 
@@ -160,6 +159,38 @@ class Test_MARC(TestCase):
             "$$iArabic Title:$$aمخطط تنفيذي شامل لحوض وادي النار$$9ara",
         )
 
+    def test_create_marc_520(self):
+        from VC_collections.marc import create_MARC_520
+
+        sample_data = pd.DataFrame(
+            {
+                "תיאור": ["דוגמה של תיאור", "sample of description"],
+                "תקציר": ["דוגמה של תקציר", "example of summary"],
+            }
+        )
+
+        results = pd.DataFrame(
+            {
+                "5202": ["$$aדוגמה של תיאור", "$$asample of description"],
+                "520": ["$$aדוגמה של תקציר$$9heb", "$$aexample of summary$$9lat"],
+            }
+        )
+        self.assertEqual(create_MARC_520(sample_data), results)
+
+    def test_create_marc_306(self):
+        from VC_collections.marc import create_MARC_306
+
+        d_input = {"משך": ['00:33:12']}
+        df_input = pd.DataFrame(data=d_input)
+
+        d_output = {"306": ['$$a003312']}
+        df_output = pd.DataFrame(data=d_output)
+
+        self.assertTrue(df_output.equals(create_MARC_306(df_input)))
+
 
 if __name__ == "__main__":
     main()
+
+
+

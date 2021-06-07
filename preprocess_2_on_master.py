@@ -2,64 +2,114 @@ import sys
 import time
 import timeit
 
-from VC_collections import marc
-from VC_collections.logger import initialize_logger
-
-sys.path.insert(
-    1, "C:/Users/Yaelg/Google Drive/National_Library/Python/VisualArts_Preprocessing"
-)
+from VC_collections.logger import initialize_logger_for_master_process2
 from VC_collections.value import *
-
 from VC_collections.authorities import *
-from VC_collections.Collection import retrieve_collection
+from VC_collections.AuthorityFiles import Authority_instance
+
+files = {
+    "Architect": "1EhFxuphaOu-S8rZy_7O8OuLk3BMH_rAXjOTqDg5yMvY",
+    "Dance": "1WcqUNkDhNbDyTdYLU_S3TbVkjZ6G03m36_9FqvBgaSc",
+    "Design": "1M-vegxBcBI7J5hZvoqLkQQ7ATxMmfyyrFpAX4-vR7FM",
+    "Theater": "1goBGosdUcCLzmdxIuF1SRYgk_mIT-eIsCJgdvd69rCw",
+}
 
 
-def is_collection_postprocess1(collection):
+def find_collection_id(call_number):
+    if call_number.count("-") > 0:
+        if "IL" in call_number and call_number.count("-") == 1:
+            return call_number
+        elif "IL" in call_number and call_number.count("-") > 1:
+            return call_number[: find_nth(call_number, "-", 2)]
+        else:
+            return call_number[: call_number.find("-")]
+    else:
+        return call_number
+
+
+def create_dataframe(client, branch):
+    return pd.DataFrame(
+        Collection.create_xl_from_gspread(client, files[branch])["Master Catalog"]
+    )
+
+
+def create_MARC_LDR(level):
+    if level == "File Record" or level == "Item Record":
+        return "00000npd#a22######a#4500"
+    else:
+        return "00000npc#a22########4500"
+
+
+def create_MARC_351(df):
+    df["351"] = df["רמת תיאור"].apply(lambda x: "$$c" + str(x).strip())
+
+    return df
+
+
+def create_MARC_093(df):
+    # creating $c tag
+    df["093"] = df["סימול"].apply(lambda x: "$$c" + str(x).strip())
+
+    # creating $d tag
+
     try:
-        return type(collection.df_final_data) == pd.DataFrame
+        collection_name_heb = Authority_instance.df_credits.loc[
+            collection_id, "שם הארכיון"
+        ]
     except:
-        return False
+        sys.stderr.write(
+            f"There is no credit in the credits table for collection {collection_id}"
+        )
+        collection_name_heb = input(
+            f"Please enter the hebrew name of the collection {collection_id}: \n"
+        )
+
+    return df
 
 
 def main():
     start_time = timeit.default_timer()
-    collection = retrieve_collection()
+
+    branch = input("Please enter branch name: [Architect, Dance, Design, Theater]\n")
 
     """ initialize logger for the logging file for that collection"""
-
-    initialize_logger(collection.branch, collection.collection_id)
+    initialize_logger_for_master_process2(branch)
     logger = logging.getLogger(__name__)
-    logger.info(
-        f"\n Starting new preprocess of {collection.collection_id}, at: {datetime.now()}"
-    )
 
+    logger.info(f"\n Starting new preprocess of {branch}, at: {datetime.now()}")
     logger.info(
         f'\nStarting new preprocess {"/".join(str(sys.modules[__name__])[:-1].split("/")[-3:])} of '
-        f"{collection.collection_id}, at: {datetime.now()}"
+        f"{branch}, at: {datetime.now()}"
     )
     time.sleep(0.5)
 
-    if is_collection_postprocess1(collection):
-        pass
-    else:
-        logger.error(
-            f"The {collection.collection_id} Catalog did not pass the preprocessing_1 pipe!"
-            f"please run preprocess_1.py for this Catalog "
-        )
-        sys.exit()
+    # connect to google drive and create the dataframe
+    google_client = Collection.connect_to_google_drive()
+    df_catalogs = create_dataframe(google_client, branch=branch)
 
-    # collection.df_final_data = collection.df_final_data.T.drop_duplicates().T
-    # df.rename(columns={df.columns[0]: "mms_id"}, inplace=True)
+    # create LDR
+    df_catalogs["LDR"] = df_catalogs["רמת תיאור"].apply(create_MARC_LDR)
 
     # create 351 (רמת תיאור)
     logger.info(f"[351] Creating  MARC 351 - LEVEL OF DESCRIPTION")
-    collection.df_final_data = marc.create_MARC_351_LDR(collection.df_final_data)
+    df_catalogs = create_MARC_351(df_catalogs)
 
-    # create MARC 911 and 093 field for Call Number (סימול פרויקט)
-    logger.info("[911/093] Creating 911/093 MARC field for Call Number")
-    collection.df_final_data = marc.create_MARC_093(
-        collection.df_final_data, collection.collection_id
-    )
+    # create MARC 093 field for Call Number (סימול פרויקט)
+    logger.info("[093] Creating 911/093 MARC field for Call Number")
+    df_catalogs = create_MARC_093(df_catalogs)
+
+    # # Add MMS id to catalog (מספר מערכת עלמא)
+    # logger.info("[001] Add MMS id to catalog")
+    # collection.df_final_data = drop_col_if_exists(collection.df_final_data, 'mms_id')
+    # collection.df_final_data, df_alma = project.get_alma_sid(
+    #     collection.aleph_custom04_path,
+    #     collection.collection_id,
+    #     collection.df_final_data,
+    # )
+
+    # create MARC 091
+    logger.info(f"[091] Create MARC 091 Field")
+    collection.df_final_data = marc.create_MARC_091(collection.df_final_data)
 
     # create 008
     logger.info(f"[008] Creating  MARC 008 field")
@@ -89,17 +139,16 @@ def main():
 
     # create 700 and 710 (added creators PERS and CORPS) (יוצרים נוספים - אישים/יוצרים נוספים - מוסד)
     logger.info(
-        "[MARC 700/710] Creating  MARC 700/710 - Personalities and Corporate bodies access points"
+        "[MARC 700/710] Creating  MARC 700/710 - Personlities and Corporate bodies access points"
     )
     collection.df_final_data = marc.create_MARC_700_710(
-        collection.df_final_data
+        collection.df_final_data, Authority_instance.df_credits
     )
 
     # create 535 (EXTENT) (היקף)
     logger.info("[MARC 535] Creating  MARC 535 - location of originals ")
     collection.df_final_data = marc.create_MARC_535(collection.df_final_data)
 
-    # TODO create 306 (EXTENT) (משך)
     logger.info("[MARC 306] Creating  MARC 306 -  duration")
     collection.df_final_data = marc.create_MARC_306(collection.df_final_data)
 
@@ -109,7 +158,7 @@ def main():
 
     # create 630 (WORKS) (יצירות)
     logger.info("[MARC 630] Creating  MARC 630 - WORKS ")
-    collection = marc.create_MARC_630(collection)
+    collection.df_final_data = marc.create_MARC_630(collection.df_final_data)
 
     # create 041 (LANGUAGE) (שפה)
     logger.info("[MARC 041] Creating  MARC 041 - LANGUAGE")
@@ -165,8 +214,13 @@ def main():
         collection.df_final_data = marc.create_MARC_952(collection.df_final_data)
 
     # add 597 (CREDIT)
+    collection = marc.add_MARC_597(collection)
     logger.info("[MARC 597] Creating MARC 597 - CREDITS")
-    collection.df_final_data = marc.add_MARC_597(collection.df_final_data)
+
+    # add 524 (CREDIT)
+    logger.info("[MARC 524] Creating MARC 597 - CREDITS")
+
+    collection = marc.add_MARC_597(collection)
 
     # create 921, 933 (CATALOGUER, CATALOGING DATE)
     if collection.branch != "REI":
@@ -204,7 +258,6 @@ def main():
 
     # create 773 (former LKR)
     logger.info("[MARC 773] Creating MARC 773 - the hierarchical link field")
-    collection.df_final_data.index = collection.df_final_data.index.astype(str)
     collection.df_final_data = marc.create_MARC_773(collection.df_final_data)
 
     # create 336
@@ -257,8 +310,6 @@ def main():
         "[MARC 650] create MARC 650 subject heading according to collection's branch"
     )
     collection = marc.create_MARC_650_branch(collection)
-
-    collection.df_final_data = marc.create_MARC_590_sponsors(collection.df_final_data, collection.branch)
 
     # last text cleaning up of dataframe:
     collection.df_final_data = collection.df_final_data.replace(

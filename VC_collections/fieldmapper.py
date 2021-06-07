@@ -136,8 +136,12 @@ catalog_field_mapper = {
     "IEtoexport": "IE_TO_EXPORT",
     "IEלייצוא": "IE_TO_EXPORT",
     'פריט ייעודי לצרכי תוכן ויח"צ': 'פריט ייעודי לצרכי תוכן ויח"צ',
-    "פריטייעודילצרכיתוכןויחצ": 'פריט ייעודי לצרכי תוכן ויח"צ',
+    "פריטייעודילצרכיתוכןויחצ": "הימצאות תיקים במיכל - רושמים",
+    "הימצאותתיקיםבמיכלרושמים": "הימצאות תיקים במיכל - דיגיטציה",
+    "הימצאותתיקיםבמיכלדיגיטציה": 'פריט ייעודי לצרכי תוכן ויח"צ',
     "תאריךפקיעתהחיסיון": "CONFIDENTIALITY",
+    "מספרמיכלישן": "מספר מיכל ישן",
+    "תקציר": "SUMMARY",
 }
 
 field_mapper_back = {
@@ -297,6 +301,7 @@ collection_field_mapper = {
     "תאריךהרישום": "DATE_CATALOGING",
     "תאריך הרישום": "DATE_CATALOGING",
     "הערותסוקר": "NOTES",
+    "תקציר": "SUMMARY",
 }
 
 final_fields_back_mapper = {
@@ -360,6 +365,9 @@ final_fields_back_mapper = {
     "SECONDARY_UNITITLE": "כותרת משנה",
     "TRANSLATED_UNITITLE": "כותרת מתורגמת",
     "CONFIDENTIALITY": "תאריך פקיעת החיסיון",
+    "SUMMARY": "תקציר",
+    "CREDIT_HEB": "קרדיט עברית",
+    "CREDIT_ENG": "קרדיט אנגלית"
 }
 
 final_column_order = [
@@ -414,6 +422,9 @@ final_column_order = [
     "מיקום פיזי",
     "חומרים קשורים",
     "תאריך פקיעת החיסיון",
+    "תקציר",
+    "קרדיט עברית",
+    "קרדיט אנגלית"
 ]
 
 field_types_dict = {
