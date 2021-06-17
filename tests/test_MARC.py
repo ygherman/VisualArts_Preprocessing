@@ -188,9 +188,20 @@ class Test_MARC(TestCase):
 
         self.assertTrue(df_output.equals(create_MARC_306(df_input)))
 
+    def test_create_710_current_owner_val(self):
+        from VC_collections.marc import create_710_current_owner_val
+        current_owner_heb = "בעלים נוכחיים"
+        current_owner_lat = "current owner"
+        test_string_heb = "דוגמה לבעלים נוכחיים"
+        test_string_eng = "example current owner"
+        test_string_blank = ""
+        self.assertEqual(create_710_current_owner_val(test_string_heb),
+                         f"{test_string_heb}$$9heb$$e{current_owner_heb}")
+        self.assertEqual(create_710_current_owner_val(test_string_eng),
+                         "example current owner$$9lat$$ecurrent owner")
+        self.assertEqual(create_710_current_owner_val(""), "")
 
 if __name__ == "__main__":
     main()
-
 
 

@@ -613,7 +613,7 @@ def create_MARC_952_mul_unknown_creators(df):
         try:
             if first_creator_val != "":
                 new_creators.insert(0, first_creator_val)
-                new_creators = list(set(new_creators))
+                new_creators = list(dict.fromkeys(new_creators))
         except Exception as e:
             sys.stderr.write(f"Exception occured: {e}")
 
@@ -647,7 +647,7 @@ def create_MARC_952_mul_unknown_creators(df):
 
 def create_MARC_100_110(df):
     """
-    create coluumn for first creator
+    create column for first creator
     check if creator is a person of a corporate body - against the CVOC of creators roles,
     and insert the value in the respective colomn
 
@@ -706,6 +706,8 @@ def create_MARC_100_110(df):
 
 
 def create_710_current_owner_val(x):
+    if x == "":
+        return ""
     ad = alphabet_detector.AlphabetDetector()
     if ad.is_latin(x):
         return x.rstrip() + "$$9lat$$ecurrent owner"
@@ -814,7 +816,8 @@ def create_MARC_700_710(df):
     df = remove_duplicate_in_column(df, "7102")
 
     # adding current owner to columns 710
-    df["7102"] = current_owner + ";" + df["7102"].astype(str)
+    if current_owner != "$$a":
+        df["7102"] = current_owner + ";" + df["7102"].astype(str)
 
     df = explode_col_to_new_df(df, "7001")
     df = explode_col_to_new_df(df, "7102")
@@ -1915,7 +1918,7 @@ def create_MARC_590(df, copyright_analysis_done):
         for index, row in df.iterrows():
             if "לא מוכן" in str(row["הערות לא גלוי למשתמש"]):
                 df.loc[index, "הערות לא גלוי למשתמש"] = (
-                    str(row["הערות לא גלוי למשתמש"])
+                    str(row["הערות לא גלוי למשתמש"]).strip("לא מוכן לניתוח זכויות יוצרים")
                     + ";Visual art ready for copyright analysis"
                 )
             else:

@@ -48,9 +48,6 @@ def main():
         )
         sys.exit()
 
-    # collection.df_final_data = collection.df_final_data.T.drop_duplicates().T
-    # df.rename(columns={df.columns[0]: "mms_id"}, inplace=True)
-
     # create 351 (רמת תיאור)
     logger.info(f"[351] Creating  MARC 351 - LEVEL OF DESCRIPTION")
     collection.df_final_data = marc.create_MARC_351_LDR(collection.df_final_data)
