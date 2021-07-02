@@ -466,7 +466,11 @@ def add_normal_dates_to_section_record(df, collection_id):
         date = df.loc[collection_id, "DATE"]
         if date != "":
             pattern = re.compile(r"\d{4}")
-            years = re.findall(pattern, date)
+            try:
+                years = re.findall(pattern, date)
+            except Exception as e:
+                sys.stderr.write(f'Problem with dates of Section Records: {date}.\n'
+                                 f'Terminated with exception {e}')
             years = sorted([int(year) for year in years])
             df.loc[collection_id, "DATE_START"] = years[0]
             df.loc[collection_id, "DATE_END"] = years[1]

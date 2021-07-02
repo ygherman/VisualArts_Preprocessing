@@ -222,6 +222,7 @@ def main():
 
     # create MARC 590
     logger.info("[MARC 590] Creating MARC  590  - HIDDEN NOTES")
+
     collection.df_final_data = marc.create_MARC_590(
         collection.df_final_data, copyright_analysis_done
     )

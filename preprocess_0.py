@@ -16,6 +16,41 @@ from VC_collections.logger import initialize_logger
 from VC_collections.project import lookup_rosetta_file
 
 
+def xml_to_json(ROS_file: minidom) -> dict:
+    """
+        The function takes the MARCxml file of the collection, which resides in ./[branch]/[collection]/Digitization/ROS
+        directory, and that was parsed into a minidom xml object, extract the MMS ID (001 tag) and the 907 (Rosetta
+        link) field, with all it's subfields. Saves the MMS ID and 907 subfield in a dictionary of dictionaries.
+    :param ROS_file: The MARCxml file of the collection parsed into a minidom object.
+    :return: dictionary of dictionaries, which key is the MMS ID and the inner dictionary is the extracted 907 field
+    """
+    d = {}
+    for record in ROS_file.getElementsByTagName("record"):
+        # for e in record.getElementsByTagName('controlfield'):
+        #     if e.attributes['tag'].value == '001':
+        #         id = e.childNodes[0].data
+        id = next(
+            e.childNodes[0].data
+            for e in record.getElementsByTagName("controlfield")
+            if e.attributes["tag"].value == "001"
+        )
+
+        dd = {}
+        for e in record.getElementsByTagName("datafield"):
+            print(f'{id}: {e.attributes["tag"].value}')
+            for sb in e.getElementsByTagName("subfield"):
+                try:
+                    dd[e.attributes["tag"].value +
+                       e.attributes["ind1"].value +
+                       e.attributes["ind2"].value + "$" +
+                       sb.attributes["code"].value] = sb.childNodes[0].data
+                except:
+                    continue
+
+        d[id] = dd
+    return d
+
+
 def create_mmsid_dict(ROS_file: minidom) -> dict:
     """
         The function takes the MARCxml file of the collection, which resides in ./[branch]/[collec  tion]/Digitization/ROS
@@ -56,7 +91,8 @@ def check_custom04_file(file_path):
 
 def create_907_json(df_collection, collection_id, digitization_path):
 
-    with open(r"Data\VIS_full.json") as json_file:
+    with open(Path(digitization_path / "ROS" / (collection_id + "_907.xml")), encoding="UTF8") as xml_file:
+        json_file = xml_to_json(minidom.parse(xml_file))
         rosetta_dict = json.load(json_file)
 
     collection_907_dict = {str(k): rosetta_dict[str(k)] for k in df_collection.index.values}
@@ -87,10 +123,27 @@ def main(**collection):
         branch = "VC-" + input(
             "Please enter the name of the Branch (Architect, Design, Dance, Theater): : "
         )
+        if branch=="VC-REI":
+            branch = "REI"
         collection_id = input("Please enter collection id: ")
-    FILE_PATH = Path(r"Data\vis_full.xml")
-    FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
 
+    BASE_PATH = Path.cwd().parent / branch / collection_id
+
+    (
+        data_path,
+        data_path_raw,
+        data_path_processed,
+        data_path_reports,
+        copyright_path,
+        digitization_path,
+        authorities_path,
+        aleph_custom21_path,
+        aleph_manage18_path,
+        aleph_custom04_path,
+    ) = create_directory("Alma", BASE_PATH)
+
+    FILE_PATH = Path(digitization_path / "ROS" / (collection_id + "_907.xml"))
+    FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
 
     # collection = Collection.retrieve_collection()
     """ initialize logger for the logging file for that collection"""
@@ -112,26 +165,14 @@ def main(**collection):
     )
     df_collection = df[mask]
 
-    BASE_PATH = Path.cwd().parent / branch / collection_id
-
-    (
-        data_path,
-        data_path_raw,
-        data_path_processed,
-        data_path_reports,
-        copyright_path,
-        digitization_path,
-        authorities_path,
-        aleph_custom21_path,
-        aleph_manage18_path,
-        aleph_custom04_path,
-    ) = create_directory("Alma", BASE_PATH)
 
     file_full_path = aleph_custom04_path / (collection_id + "_alma_sysno.xlsx")
     check_custom04_file(file_full_path)
 
     logger.info("Saving Dataframe to Excel file in the custom04 folder")
     df_collection.to_excel(file_full_path)
+
+
 
     create_907_json(df_collection, collection_id, digitization_path)
 

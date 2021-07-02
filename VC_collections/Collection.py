@@ -16,6 +16,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from pymarc import XMLWriter, Record, Field
 
 import preprocess_0
+import Data.vis_907_dict
+from Data import vis_907_dict
 from VC_collections.project import get_branch_colletionID
 from . import columns
 from .AuthorityFiles import Authority_instance
@@ -145,15 +147,15 @@ def export_entire_catalog(collection, df_sheets_dict, stage):
             collection.collection_id + "_PRE1_FINAL.xlsx"
         )
 
-    if type(df_sheets_dict) == list:
+    if type(df_sheets_dict) == dict:
         write_excel(
-            list(df_sheets_dict.values()), file_path, list(df_sheets_dict.keys())
+            df_sheets_dict, file_path, list(df_sheets_dict.keys())
         )
 
     # TODO check if collectin.full_catalog is of type df or of type dict of dfs?
     else:
         pass
-        # write_excel(df_sheets_dict, file_path, "Sheet1")
+        write_excel(df_sheets_dict, file_path, "Sheet1")
 
 
 def remove_unnamed_cols(df):
@@ -682,7 +684,7 @@ class Collection:
                 sys.stderr.write(
                     f"no {collection_id}_alma_sysno.xlsx exists. \n Running preprocess_0 first"
                 )
-
+                vis_907_dict.main()
                 preprocess_0.main(collection_id=self.collection_id, branch=self.branch)
 
         # set up logger for collection instance

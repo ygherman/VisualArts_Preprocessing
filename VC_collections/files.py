@@ -397,26 +397,33 @@ def write_excel(df, path, sheets):
     writer = pd.ExcelWriter(path, engine="xlsxwriter")
 
     # Convert the dataframe to an XlsxWriter Excel object.
-    if type(df) is list and type(sheets) is list:
-        i = 0
-        for frame in df:
-            frame.to_excel(writer, sheet_name=sheets[i])
-            i += 1
-    else:
-        while True:
-            try:
-                df.to_excel(writer, sheet_name=sheets)
-                break
-            except:
-                sys.stderr.write(f"File {path} open! Please close file ")
-                input("Press Enter to continue...")
+    if type(df) is dict and type(sheets) is list:
+        try:
+            i = 0
+            for frame in df.keys():
+                df[frame].to_excel(writer, sheet_name=sheets[i])
+                i += 1
+        except Exception as e:
+            sys.stderr.write(f"Exception is {e} ")
+
+    elif type(df) is list and type(sheets) is list:
+        try:
+            i = 0
+            for frame in df:
+                frame.to_excel(writer, sheet_name=sheets[i])
+                i += 1
+        except Exception as e:
+            sys.stderr.write(f"Exception is {e} ")
+            input("Press Enter to continue...")
+    elif type(df) is pd.DataFrame and type(sheets) is str:
+        df.to_excel(writer, sheet_name=sheets)
     while True:
         try:
             writer.close()
             break
-        except:
-            sys.stderr.write(f"File {path} open! Please close file ")
-        input("Press Enter to continue...")
+        except Exception as e:
+            sys.stderr.write(f"Exception is {e}")
+            input("Press Enter to continue...")
 
 
 def get_branch_colletionID(branch="", collection_id="", batch=False):

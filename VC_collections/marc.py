@@ -1930,7 +1930,7 @@ def create_MARC_590(df, copyright_analysis_done):
             + ";Visual art ready for copyright analysis"
         )
 
-    df = explode_col_to_new_df(df, "הערות לא גלוי למשתמש", start=2)
+    df = explode_col_to_new_df(df, "הערות לא גלוי למשתמש", start=1)
     cols_590 = [col for col in list(df.columns) if "הערות לא גלוי למשתמש" in col]
     for col in cols_590:
         new_col = "590" + col[col.find("_") :]
@@ -2225,9 +2225,10 @@ def create_MARC_590_sponsors(df, branch):
     col_number = last_index_of_reoccurring_column(df, "590")
     df[f"590_{str(col_number + 1)}"] = "$$asponsor: Jerusalem and Heritage"
     df[f"590_{str(col_number + 2)}"] = "$$asponsor: Landmarks"
-    df[
-        f"590_{str(col_number + 3)}"
-    ] = "$$asponsor: The Judaica collection at the Harvard University Library"
+    if branch != "REI":
+        df[
+            f"590_{str(col_number + 3)}"
+        ] = "$$asponsor: The Judaica collection at the Harvard University Library"
 
     if branch == "VC-Architect":
         df[
