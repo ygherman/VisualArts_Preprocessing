@@ -143,7 +143,10 @@ def main(**collection):
     ) = create_directory("Alma", BASE_PATH)
 
     FILE_PATH = Path(digitization_path / "ROS" / (collection_id + "_907.xml"))
-    FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
+    try:
+        FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
+    except FileNotFoundError:
+        sys.stderr.write(f'No file {FILE_PATH} exists. Please export XML and run again!')
 
     # collection = Collection.retrieve_collection()
     """ initialize logger for the logging file for that collection"""
