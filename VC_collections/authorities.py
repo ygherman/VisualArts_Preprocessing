@@ -621,19 +621,21 @@ def fix_values_in_column(col, err, new_val):
 def fix_original(col, error_words, new_values):
     error_words2possible_new_val = convert_dict(new_values)
     missing_errs = []
+    error_words = list(filter(None, error_words))
+
     for err in error_words:
-        if len(err) > 0:
-            ret, col = fix_values_in_column(
-                col, err.strip(), find_new_value(err, error_words2possible_new_val)
-            )
-            logger.debug(f"[VOC] error value: [{err}] with correct value: [{ret}]")
-            if ret is not None:
-                missing_errs.append(ret)
+        ret, col = fix_values_in_column(
+            col, err.strip(), find_new_value(err, error_words2possible_new_val)
+        )
+        # logger.debug(f"[VOC] error value: [{err}] with correct value: [{ret}]")
+        if ret is not None:
+            missing_errs.append(ret)
     return missing_errs, col
 
 
 def check_values_against_cvoc(df: pd.DataFrame, col_name: str, new_values: pd.Series):
     logger = logging.getLogger(__name__)
+    df[col_name] = df[col_name].replace(np.nan, "")
     test_list = [x.split(";") for x in df[col_name].tolist()]
     vals_to_check = [item.strip() for sublist in test_list for item in sublist]
     vals_to_check = list(set(vals_to_check))

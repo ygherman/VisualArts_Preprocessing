@@ -148,9 +148,7 @@ def export_entire_catalog(collection, df_sheets_dict, stage):
         )
 
     if type(df_sheets_dict) == dict:
-        write_excel(
-            df_sheets_dict, file_path, list(df_sheets_dict.keys())
-        )
+        write_excel(df_sheets_dict, file_path, list(df_sheets_dict.keys()))
 
     # TODO check if collectin.full_catalog is of type df or of type dict of dfs?
     else:
@@ -453,27 +451,31 @@ class Collection:
         )
         if "UNITID" not in list(df_collection.columns):
             df_collection.index.name = "UNITID"
-            df_collection = df_collection.reset_index()
-        # else:
-        #     df_collection.set_index("UNITID", inplace=True)
+            # df_collection = df_collection.reset_index()
+        else:
+            df_collection.set_index("UNITID", inplace=True)
 
         if "UNITID" not in list(df_catalog.columns):
             df_catalog.index.name = "UNITID"
-        # else:
-        #     # df_catalog.set_index("UNITID", inplace=True)
+        else:
+            df_catalog.set_index("UNITID", inplace=True)
 
         try:
             combined_catalog = pd.concat([df_collection, df_catalog], axis=0, sort=True)
 
         except:
+            # df_collection.reset_index(inplace=True, drop=True)
+            # df_catalog.reset_index(inplace=True, drop=True)
+            combined_catalog = pd.concat([df_collection, df_catalog], axis=0, sort=True)
 
-            assert (
-                combined_catalog is not None
-            ), "the Collection and Catalog dataframes could not be combined"
+            sys.stderr.write(
+                "the Collection and Catalog dataframes could not be combined"
+            )
+            sys.exit()
+
             combined_catalog = remove_unnamed_cols(combined_catalog)
             combined_catalog = combined_catalog.set_index("UNITID")
             combined_catalog.index = combined_catalog.index.map(str)
-            sys.exit()
 
         return combined_catalog
 
@@ -684,7 +686,6 @@ class Collection:
                 sys.stderr.write(
                     f"no {collection_id}_alma_sysno.xlsx exists. \n Running preprocess_0 first"
                 )
-                vis_907_dict.main()
                 preprocess_0.main(collection_id=self.collection_id, branch=self.branch)
 
         # set up logger for collection instance

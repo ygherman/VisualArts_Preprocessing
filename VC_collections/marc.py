@@ -175,10 +175,16 @@ def create_MARC_245(df):
         )
         df["24510"] = df["24510"].astype(str) + df["כותרת משנה"]
 
-    if len(df[df["כותרת ערבית"] != '']):
-        col_name_246 = last_index_of_reoccurring_column(df, "24631")
+    if len(df[df["כותרת ערבית"] != ""]) > 0:
+        last_2463_index = last_index_of_reoccurring_column(df, "2463")
+        if last_2463_index > 0:
+            col_name_246 = f"2463_{last_2463_index}"
+        else:
+            col_name_246 = "2463"
         df[col_name_246] = df["כותרת ערבית"].apply(
-            lambda x: f"$$a{str(x)}$$9ara" if str(x).strip().lstrip() != "" else ""
+            lambda x: f"$$iArabic title: $$a{str(x)}"
+            if str(x).strip().lstrip() != ""
+            else ""
         )
 
     return df
@@ -225,7 +231,7 @@ def create_MARC_246(df):
             else:
                 val = create_246_value(row["כותרת מתורגמת"])
 
-            df.loc[index, "24631"] = val
+            df.loc[index, "2463"] = val
 
         df = drop_col_if_exists(df, "כותרת מתורגמת")
 
@@ -706,8 +712,9 @@ def create_MARC_100_110(df):
 
 
 def create_710_current_owner_val(x):
-    if x == "":
+    if x == "" or x == "חזקה פרטית":
         return ""
+
     ad = alphabet_detector.AlphabetDetector()
     if ad.is_latin(x):
         return x.rstrip() + "$$9lat$$ecurrent owner"
@@ -898,8 +905,12 @@ def create_MARC_306(df):
     :return:The Dataframe with the new 306 field
     """
     if column_exists(df, "משך"):
-        df["306"] = df["משך"].str.replace(":", "").apply(lambda x: str(x).strip() if x != "" else '')
-        df["306"] = df["306"].apply(lambda x: "$$a" + x if x != '' else '')
+        df["306"] = (
+            df["משך"]
+            .str.replace(":", "")
+            .apply(lambda x: str(x).strip() if x != "" else "")
+        )
+        df["306"] = df["306"].apply(lambda x: "$$a" + x if x != "" else "")
         df = drop_col_if_exists(df, "משך")
     return df
 
@@ -1307,7 +1318,9 @@ def create_MARC_260_008_date(df, start_date_col, end_date_col, text_date_col):
     """
     df[start_date_col] = df[start_date_col].apply(lambda x: x[:4])
     df[end_date_col] = df[end_date_col].apply(lambda x: x[:4])
-    df["260"] = df[text_date_col].apply(lambda x: "$$g" + str(x) if str(x) != "" else "")
+    df["260"] = df[text_date_col].apply(
+        lambda x: "$$g" + str(x) if str(x) != "" else ""
+    )
 
     # update 008 field
     for index, row in df.iterrows():
@@ -1326,7 +1339,9 @@ def create_MARC_260_008_date(df, start_date_col, end_date_col, text_date_col):
         except Exception as e:
             print(e)
 
-        df.loc[index, "008"] = row["008"][:7] + str(early_date) + str(late_date) + row["008"][15:]
+        df.loc[index, "008"] = (
+            row["008"][:7] + str(early_date) + str(late_date) + row["008"][15:]
+        )
 
     return df
 
@@ -1403,7 +1418,7 @@ def create_MARC_773(df):
     for index, row in df.iterrows():
         if "$$cFonds Record" in row["351"]:
             continue
-        root_index, root_title = get_root_index_and_title(index,df)
+        root_index, root_title = get_root_index_and_title(index, df)
         df.loc[index, "77318"] = f"$$t{root_title}$$w{root_index}"
     return df
 
@@ -1785,7 +1800,7 @@ def create_MARC_336(df):
     )
     df_explode_336 = df_explode_336.replace(np.nan, "")
     df = pd.concat([df, df_explode_336], axis=1)
-    cols_336 = [x for x in list(df.columns.values) if "336" in x]
+    cols_336 = [str(x) for x in list(df.columns.values) if "336" in str(x)]
     df = drop_col_if_exists(df, "336")
     df = drop_col_if_exists(df, "סוג חומר")
 
@@ -1817,7 +1832,7 @@ def last_index_of_reoccurring_column(df: pd.DataFrame, col_name: str) -> int:
 
     @rtype: int
     """
-    return len([col for col in list(df.columns) if col_name in col])
+    return len([str(col) for col in list(df.columns) if col_name in str(col)])
 
 
 # TODO - refactor messy messy function: use the Authority_instance
@@ -1918,7 +1933,9 @@ def create_MARC_590(df, copyright_analysis_done):
         for index, row in df.iterrows():
             if "לא מוכן" in str(row["הערות לא גלוי למשתמש"]):
                 df.loc[index, "הערות לא גלוי למשתמש"] = (
-                    str(row["הערות לא גלוי למשתמש"]).strip("לא מוכן לניתוח זכויות יוצרים")
+                    str(row["הערות לא גלוי למשתמש"]).strip(
+                        "לא מוכן לניתוח זכויות יוצרים"
+                    )
                     + ";Visual art ready for copyright analysis"
                 )
             else:
@@ -1931,7 +1948,9 @@ def create_MARC_590(df, copyright_analysis_done):
         )
 
     df = explode_col_to_new_df(df, "הערות לא גלוי למשתמש", start=1)
-    cols_590 = [col for col in list(df.columns) if "הערות לא גלוי למשתמש" in col]
+    cols_590 = [
+        str(col) for col in list(df.columns) if "הערות לא גלוי למשתמש" in str(col)
+    ]
     for col in cols_590:
         new_col = "590" + col[col.find("_") :]
         df[new_col] = df[col].apply(lambda x: "$$a" + str(x) if str(x) != "" else "")
@@ -2123,7 +2142,8 @@ def update_df_with_field_dict(df, tag_dict, tag):
             sys.stderr.write(e)
             pass
     if tag == "952":
-        df[tag] = df[tag].astype("str") + df["952_g"]
+        # df[tag] = df[tag].astype("str") + df["952_g"]
+        df[tag] = df[tag].astype("str")
         df = drop_col_if_exists(df, "952_g")
     return df
 
@@ -2159,7 +2179,9 @@ def add_copyright_field_from_alma(collection):
 
 def add_MARC_597(df):
 
-    df["597"] = "$$a" + df["קרדיט עברית"].astype(str) + "$$a" + df["קרדיט אנגלית"].astype(str)
+    df["597"] = (
+        "$$a" + df["קרדיט עברית"].astype(str) + "$$a" + df["קרדיט אנגלית"].astype(str)
+    )
     df = drop_col_if_exists(df, "קרדיט עברית")
     df = drop_col_if_exists(df, "קרדיט אנגלית")
 
@@ -2169,9 +2191,10 @@ def add_MARC_597(df):
 def export_MARCXML_final_table(collection):
     logger = logging.getLogger()
     logger.info(f"[MARCXML] create final MARC XML file for {collection.collection_id}")
-    df_final_cols = sorted([
-        x for x in list(collection.df_final_data.columns) if x[0].isdigit()
-    ] + ["LDR"])
+    df_final_cols = sorted(
+        [str(x) for x in list(collection.df_final_data.columns) if str(x)[0].isdigit()]
+        + ["LDR"]
+    )
     collection.marc_data = collection.df_final_data[df_final_cols]
 
     counter, run_time = collection.create_MARC_XML()
@@ -2197,15 +2220,24 @@ def create_MARC_650_branch(collection):
     :param collection: The collection object
     :return: the collection object with the df_final_data, with the added 650 MARC field
     """
+    last_index = last_index_of_reoccurring_column(collection.df_final_data, "650 7")
+
     if collection.branch == "VC-Architect":
-        # last_index_of_reoccurring_column(collection.df_final_data, "650")
-        collection.df_final_data["650 7"] = "$$aArchitecture$$zIsrael$$9lat$$2NLI"
+        collection.df_final_data[
+            f"650 7_{last_index}"
+        ] = "$$aArchitecture$$zIsrael$$9lat$$2NLI"
     elif collection.branch == "VC-Dance":
-        collection.df_final_data["650 7"] = "$$aDance$$zIsrael$$9lat$$2NLI"
+        collection.df_final_data[
+            f"650 7_{last_index}"
+        ] = "$$aDance$$zIsrael$$9lat$$2NLI"
     elif collection.branch == "VC-Design":
-        collection.df_final_data["650 7"] = "$$aDesign$$zIsrael$$9lat$$2NLI"
+        collection.df_final_data[
+            f"650 7_{last_index}"
+        ] = "$$aDesign$$zIsrael$$9lat$$2NLI"
     elif collection.branch == "VC-Theater":
-        collection.df_final_data["650 7"] = "$$aTheater$$zIsrael$$9lat$$2NLI"
+        collection.df_final_data[
+            f"650 7_{last_index}"
+        ] = "$$aTheater$$zIsrael$$9lat$$2NLI"
 
     return collection
 
@@ -2244,5 +2276,20 @@ def create_MARC_590_sponsors(df, branch):
         ] = "$$asponsor: Shenkar - Engineering. Design. Art."
 
     if branch == "VC-Theater":
-        df[f"590_{str(col_number + 4)}"] = "$$sponsor: University of Haifa"
+        df[f"590_{str(col_number + 4)}"] = "$$asponsor: University of Haifa"
+    return df
+
+
+def create_MARC_650(df):
+
+    for index, row in df.iterrows():
+        if row["מילות מפתח_נושאים"] == "" or row["מילות מפתח_נושאים"] is np.nan:
+            continue
+
+        subject_list = row["מילות מפתח_נושאים"].split(";")
+
+        for subject in subject_list:
+            if subject in Authority_instance.df_subject_mapper.keys():
+                df.loc[index, "650 7"] = Authority_instance.df_subject_mapper[subject]
+
     return df

@@ -40,10 +40,13 @@ def xml_to_json(ROS_file: minidom) -> dict:
             print(f'{id}: {e.attributes["tag"].value}')
             for sb in e.getElementsByTagName("subfield"):
                 try:
-                    dd[e.attributes["tag"].value +
-                       e.attributes["ind1"].value +
-                       e.attributes["ind2"].value + "$" +
-                       sb.attributes["code"].value] = sb.childNodes[0].data
+                    dd[
+                        e.attributes["tag"].value
+                        + e.attributes["ind1"].value
+                        + e.attributes["ind2"].value
+                        + "$"
+                        + sb.attributes["code"].value
+                    ] = sb.childNodes[0].data
                 except:
                     continue
 
@@ -91,17 +94,23 @@ def check_custom04_file(file_path):
 
 def create_907_json(df_collection, collection_id, digitization_path):
 
-    with open(Path(digitization_path / "ROS" / (collection_id + "_907.xml")), encoding="UTF8") as xml_file:
+    with open(
+        Path(digitization_path / "ROS" / (collection_id + "_907.xml")), encoding="UTF8"
+    ) as xml_file:
         json_file = xml_to_json(minidom.parse(xml_file))
         rosetta_dict = json.load(json_file)
 
-    collection_907_dict = {str(k): rosetta_dict[str(k)] for k in df_collection.index.values}
+    collection_907_dict = {
+        str(k): rosetta_dict[str(k)] for k in df_collection.index.values
+    }
 
     json_path = Path(digitization_path / "ROS" / (collection_id + "_907.json"))
 
     if json_path.exists():
         os.remove(json_path)
-    with open(digitization_path / "ROS" / (collection_id + "_907.json"), "w", encoding="utf8") as fp:
+    with open(
+        digitization_path / "ROS" / (collection_id + "_907.json"), "w", encoding="utf8"
+    ) as fp:
         json.dump(collection_907_dict, fp)
 
     return df_collection
@@ -123,7 +132,7 @@ def main(**collection):
         branch = "VC-" + input(
             "Please enter the name of the Branch (Architect, Design, Dance, Theater): : "
         )
-        if branch=="VC-REI":
+        if branch == "VC-REI":
             branch = "REI"
         collection_id = input("Please enter collection id: ")
 
@@ -146,7 +155,9 @@ def main(**collection):
     try:
         FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
     except FileNotFoundError:
-        sys.stderr.write(f'No file {FILE_PATH} exists. Please export XML and run again!')
+        sys.stderr.write(
+            f"No file {FILE_PATH} exists. Please export XML and run again!"
+        )
 
     # collection = Collection.retrieve_collection()
     """ initialize logger for the logging file for that collection"""
@@ -155,7 +166,6 @@ def main(**collection):
     logger.info(
         "Extracting 001 (MMSID) and 093 (*)Call number) and turning into Dataframe"
     )
-
 
     d = create_mmsid_dict(FILE_PATH_XML)
 
@@ -168,16 +178,13 @@ def main(**collection):
     )
     df_collection = df[mask]
 
-
     file_full_path = aleph_custom04_path / (collection_id + "_alma_sysno.xlsx")
     check_custom04_file(file_full_path)
 
     logger.info("Saving Dataframe to Excel file in the custom04 folder")
     df_collection.to_excel(file_full_path)
 
-
-
-    create_907_json(df_collection, collection_id, digitization_path)
+    # create_907_json(df_collection, collection_id, digitization_path)
 
     elapsed = timeit.default_timer() - start_time
     logger.info(f"Execution Time: {elapsed}")

@@ -284,6 +284,9 @@ class Authority:
 
         df_level, level_cols = create_df_from_gs(spreadsheet, "רמת תיאור")
 
+        df_subjects, df_subjects_cols = create_df_from_gs(spreadsheet, "נושאים")
+        df_subjects_mapper = df_subjects.set_index("נושא עברית").to_dict()["650 7_ENG"]
+
         (
             self.df_media_format_auth,
             self.media_format_mapping_dict,
@@ -311,6 +314,7 @@ class Authority:
         self.privacy_mapping_dict = privacy_mapping_dict
         self.privacy_search_dict = privacy_search_dict
         self.mapper_655_to_999 = mapper_655_to_999
+        self.df_subject_mapper = df_subjects_mapper
 
 
 if __name__ != "__main__":

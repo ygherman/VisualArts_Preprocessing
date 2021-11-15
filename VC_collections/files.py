@@ -394,7 +394,14 @@ def write_excel(df, path, sheets):
     :param path: the path name of the output file, or a list of sheets
     :param sheets: can be a list of sheet or
     """
-    writer = pd.ExcelWriter(path, engine="xlsxwriter")
+    while True:
+
+        try:
+            writer = pd.ExcelWriter(path, engine="xlsxwriter")
+            break
+        except Exception as e:
+            sys.stderr.write(f"Exception is {e} ")
+            input("Press Enter to continue...")
 
     # Convert the dataframe to an XlsxWriter Excel object.
     if type(df) is dict and type(sheets) is list:

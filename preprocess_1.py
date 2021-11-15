@@ -3,7 +3,10 @@ import sys
 import timeit
 from xml.dom import minidom
 
+import fuzzywuzzy.fuzz
+import numpy as np
 import pandas as pd
+import requests
 from alphabet_detector import AlphabetDetector
 from df2gspread import df2gspread as d2g
 
@@ -73,6 +76,8 @@ def check_missing_rootids(collection):
             value in collection.full_catalog.index
             or value == ""
             or value == collection.collection_id
+            or value == "nan"
+            or value is np.nan
         ):
             continue
         else:
@@ -92,10 +97,13 @@ def check_missing_rootids(collection):
 def create_ROOT_id(df):
     logger = logging.getLogger(__name__)
 
-    if "ROOTID" in list(df.columns):
+    if (
+        "ROOTID" in list(df.columns)
+        and not df["ROOTID"].replace("", np.nan).isnull().all()
+    ):
         logger.info("[ROOTID] Column exists")
         for index, row in df.loc[df.index[1:]].iterrows():
-            if row["ROOTID"] != "":
+            if row["LEVEL"] == "Fonds Record" or row["ROOTID"] is not np.nan:
                 continue
             else:
                 df.loc[index, "ROOTID"] = ROOTID_finder(index)
@@ -215,7 +223,11 @@ def check_mandatory_cols_v2(df):
 
 
 def check_unitid(df):
+    df = df.dropna(axis=0, how="all")
+    df = drop_col_if_exists(df, "UNITID")
     df = df.reset_index()
+    # df = df.replace(np.nan, "")
+
     logger = logging.getLogger(__name__)
 
     df["UNITID"] = df["UNITID"].apply(whiteSpaceStriper)
@@ -238,13 +250,120 @@ def clean_record_title(df):
     df.UNITITLE = df.UNITITLE.astype(str)
 
     def fix_title(title):
-        if title == "" or title == np.nan or title == " ":
+        if title == "" or title == np.nan or title == " " or title is np.nan:
             return ""
         return title.replace(",", " -", 1).lstrip().replace("\n", " ")
 
     df["UNITITLE"] = df["UNITITLE"].apply(fix_title)
     if "UNITITLE_ENG" in list(df.columns):
         df["UNITITLE_ENG"] = df["UNITITLE_ENG"].apply(fix_title)
+
+    return df
+
+
+# TODO
+def add_english_collection_title(df, collection_id):
+    df.loc[
+        df[df["LEVEL"] == "Fonds Record"].index[0], "UNITITLE_ENG"
+    ] = Authority_instance.df_credits.loc[collection_id, "שם הארכיון באנגלית"]
+    return df
+
+
+def find_name_in_viaf(name):
+    name_lang = check_lang(name)
+    try:
+        r = requests.get(
+            url=f'http://www.viaf.org/viaf/search?query=cql.any+=+"{name}"&maximumRecords=5&httpAccept=application/json'
+        )
+
+    except requests.exceptions.RequestException as e:  # This is the correct syntax
+        raise SystemExit(e)
+
+    response_in_json = r.json()
+    # no results
+    if response_in_json["searchRetrieveResponse"]["numberOfRecords"] == "0":
+        return None, None
+    for record in response_in_json["searchRetrieveResponse"]["records"]:
+        # print(f'type: {type(record["record"]["recordData"]["mainHeadings"]["data"])}')
+        # print(record["record"]["recordData"]["mainHeadings"]["data"])
+        # print("\n")
+        # print(f'record: {record["record"]["recordData"]["mainHeadings"]["data"]}')
+        if type(record["record"]["recordData"]["mainHeadings"]["data"]) == list:
+
+            for heading in record["record"]["recordData"]["mainHeadings"]["data"]:
+                try:
+                    if (
+                        fuzzywuzzy.fuzz.token_set_ratio(name, heading["text"]) >= 90
+                        and "J9U" in heading["sources"]["s"]
+                    ):
+                        # if name in heading["text"] and "J9U" in heading["sources"]["s"]:
+                        NLI_name = heading["text"]
+                        print(
+                            f'heading_text: {heading["text"]}, \nheading_sources: {heading["sources"]}\n'
+                        )
+                        if type(heading["sources"]["s"]) == list:
+                            NLI_id = [
+                                s for s in heading["sources"]["sid"] if "J9U" in s
+                            ][0].replace("J9U|", "")
+                        else:
+                            NLI_id = heading["sources"]["sid"].replace("J9U|", "")
+                        print(f"name: {name}, returning : {NLI_name}, NLI_id: {NLI_id}")
+                        return NLI_id, NLI_name
+                    else:
+                        continue
+                except Exception as e:
+                    pass
+
+        else:
+            heading = record["record"]["recordData"]["mainHeadings"]["data"]
+            if name in heading["text"] and "J9U" in heading["sources"]["s"]:
+                NLI_name = heading["text"]
+                print(
+                    f'heading_text: {heading["text"]}, \nheading_sources: {heading["sources"]}\n'
+                )
+                if type(heading["sources"]["s"]) == list:
+                    NLI_id = [s for s in heading["sources"]["sid"] if "J9U" in s][
+                        0
+                    ].replace("J9u|", "")
+                else:
+                    NLI_id = heading["sources"]["sid"].replace("J9U|", "")
+                print(f"name: {name}, returning: {NLI_name}, NLI_id: {NLI_id}")
+                return NLI_id, NLI_name
+            else:
+                continue
+
+    print(f"no NLI Authority for {name}")
+    return None, None
+
+
+def is_valid_name_to_search_viaf(name):
+    if name is np.nan:
+        return False
+    if name == "":
+        return False
+    if "?" in name:
+        return False
+    if "לא ידוע" in name:
+        return False
+    else:
+        return True
+
+
+def check_against_viaf(df, authority_type="pers"):
+    for index, row in df.iterrows():
+        if not is_valid_name_to_search_viaf(row["Name"]):
+            continue
+
+        try:
+            NLI_id, NLI_heading = find_name_in_viaf(row["Name"])
+        except Exception as e:
+            sys.stderr.write(f"Exception {e} occured")
+            pass
+        if NLI_heading == None:
+            continue
+        else:
+            df.loc[index, "VIAF Name"] = NLI_heading
+            df.loc[index, "VIAF NLI id"] = NLI_id
 
     return df
 
@@ -270,8 +389,12 @@ def create_authorities_report(collection, authority_type):
         col = "WORKS"
         combined_authority_col = "WORKS"
         authority_col = "WORKS"
+    elif authority_type == "SUBJECT":
+        col = "SUBJECT"
+        combined_authority_col = "SUBJECT"
+        authority_col = "SUBJECT"
 
-    if col not in list(df.columns):
+    if col not in list(df.columns) or df[col].isnull().all():
         return collection
 
     logger.info(f"[{col}] Creating a dataframe for creators which are {authority_type}")
@@ -338,6 +461,9 @@ def create_authorities_report(collection, authority_type):
         axis=1,
     )
 
+    if authority_type == "PERS":  # or authority_type == "CORPS":
+        df_authority = check_against_viaf(df_authority)
+
     unique_authority_filename = collection.authorities_path / (
         collection.collection_id
         + "_"
@@ -359,11 +485,22 @@ def create_authorities_report(collection, authority_type):
         f"[Authorities - {authority_type}] creating report for unique {authority_col},"
         f" file name: {unique_authority_filename}"
     )
-    write_excel(
-        pd.DataFrame(df_authority.Name.unique()),
-        unique_authority_filename,
-        "unique_" + authority_type.lower(),
-    )
+
+    if authority_type == "PERS":
+        write_excel(
+            df_authority[["Name", "VIAF Name", "VIAF NLI id"]].drop_duplicates(),
+            # pd.DataFrame(df_authority.Name.unique()),
+            unique_authority_filename,
+            "unique_" + authority_type.lower(),
+        )
+
+    else:
+        write_excel(
+            # df_authority[["Name", "VIAF Name", "VIAF NLI id"]].drop_duplicates(),
+            pd.DataFrame(df_authority.Name.unique()),
+            unique_authority_filename,
+            "unique_" + authority_type.lower(),
+        )
 
     # sort by index (names of pers) and then by count (number of occurrences)
     df_authority = df_authority.reset_index(drop=True)
@@ -378,6 +515,18 @@ def create_authorities_report(collection, authority_type):
 
     df = df.set_index("UNITID")
     collection.full_catalog = df
+
+    if authority_type == "PERS":
+        collection.df_pers = df_authority
+        authority_col = "CREATOR_" + authority_type
+    elif authority_type == "CORPS":
+        collection.df_corps = df_authority
+    elif authority_type == "GEO":
+        collection.df_geo = df_authority
+    elif authority_type == "WORKS":
+        collection.df_work = df_authority
+    elif authority_type == "SUBJECTS":
+        collection.df_subjects = df_authority
 
     return collection
 
@@ -469,8 +618,10 @@ def add_normal_dates_to_section_record(df, collection_id):
             try:
                 years = re.findall(pattern, date)
             except Exception as e:
-                sys.stderr.write(f'Problem with dates of Section Records: {date}.\n'
-                                 f'Terminated with exception {e}')
+                sys.stderr.write(
+                    f"Problem with dates of Section Records: {date}.\n"
+                    f"Terminated with exception {e}"
+                )
             years = sorted([int(year) for year in years])
             df.loc[collection_id, "DATE_START"] = years[0]
             df.loc[collection_id, "DATE_END"] = years[1]
@@ -602,23 +753,56 @@ def add_current_owner(df: pd.DataFrame, collection_id: str) -> pd.DataFrame:
     :return: The Dataframe with the filled CURRENT OWNER data
     """
     if collection_id in Authority_instance.df_credits.index:
-        if Authority_instance.df_credits.loc[collection_id, "מיקום הפקדה עבור בעלים נוכחי"] == '':
+        if (
+            Authority_instance.df_credits.loc[
+                collection_id, "מיקום הפקדה עבור בעלים נוכחי"
+            ]
+            == ""
+        ):
             return df
         else:
-            df["CURRENT_OWNER"] = Authority_instance.df_credits.loc[collection_id, "מיקום הפקדה עבור בעלים נוכחי"]
+            df["CURRENT_OWNER"] = Authority_instance.df_credits.loc[
+                collection_id, "מיקום הפקדה עבור בעלים נוכחי"
+            ]
     else:
-        logger.error(f'[CURRENT OWNER] No current owner for: {collection_id}')
+        logger.error(f"[CURRENT OWNER] No current owner for: {collection_id}")
     return df
 
 
 def add_credits(df, collection_id):
-    if Authority_instance.df_credits.loc[collection_id, "קרדיט עברית"] == '':
-        sys.stderr.write(f'No credit in the credits table for {collection_id} Archive\n'
-                         f'Please correct and re-run!')
+    if Authority_instance.df_credits.loc[collection_id, "קרדיט עברית"] == "":
+        sys.stderr.write(
+            f"No credit in the credits table for {collection_id} Archive\n"
+            f"Please correct and re-run!"
+        )
         sys.exit()
     df["CREDIT_HEB"] = Authority_instance.df_credits.loc[collection_id, "קרדיט עברית"]
     df["CREDIT_ENG"] = Authority_instance.df_credits.loc[collection_id, "קרדיט אנגלית"]
     return df
+
+
+def replace_with_authorities_from_NLI(collection):
+    collection.df_pers = collection.df_pers.replace(np.nan, "")
+    for index, row in collection.df_pers.iterrows():
+        if (
+            row["VIAF Name"] == ""
+            or row["VIAF Name"] is np.nan
+            or row["VIAF Name"] == "nan"
+        ):
+            continue
+        if (
+            str(
+                input(
+                    f'replace OLD name: {index}, with NEW name: {row["VIAF Name"]} (enter Y/N)'
+                )
+            ).lower()
+            == "y"
+        ):
+            collection.full_catalog = collection.full_catalog.replace(
+                f"({index})[\ [|;]", row["VIAF Name"], regex=True
+            )
+
+    return collection
 
 
 def main():
@@ -648,14 +832,25 @@ def main():
     collection = clean_tables(collection)
     if hasattr(collection, "full_catalog"):
         collection.full_catalog = clean_catalog(collection.full_catalog)
+        collection.full_catalog.index.name = "UNITID"
 
     logger.info(
         f"[HEADERS] Checking that mandatory columns exists in table for {collection.collection_id}(full_catalog)."
     )
-    if "FIRST_CREATOR_PERS" in list(collection.full_catalog.columns):
-        check_mandatory_cols_v2(collection.full_catalog.reset_index())
+    collection.full_catalog = collection.full_catalog.replace(
+        r"^\s*$", np.nan, regex=True
+    )
+
+    if (
+        "FIRST_CREATOR_PERS" in list(collection.full_catalog.columns)
+        and not collection.full_catalog["FIRST_CREATOR_PERS"].isnull().all()
+    ):
+        # check_mandatory_cols_v2(collection.full_catalog.reset_index())
+        check_mandatory_cols_v2(collection.full_catalog)
+
     elif "COMBINED_CREATORS" in list(collection.full_catalog.columns):
-        check_mandatory_cols_v1(collection.full_catalog.reset_index())
+        # check_mandatory_cols_v1(collection.full_catalog.reset_index())
+        check_mandatory_cols_v1(collection.full_catalog)
     elif "ADD_CREATORS" in list(collection.full_catalog.columns):
         collection.full_catalog = split_creators_by_type(
             collection.full_catalog, "ADD_CREATORS"
@@ -707,6 +902,11 @@ def main():
     logger.info("[UNITITLE] Cleaning records title")
     collection.full_catalog = clean_record_title(collection.full_catalog)
 
+    logger.info("[ENG_UNITITLE_COLLECTION Get English title from credits table")
+    collection.full_catalog = add_english_collection_title(
+        collection.full_catalog, collection.collection_id
+    )
+
     logger.info("[DATES] Adding normal date to Section Record")
     collection.full_catalog = add_normal_dates_to_section_record(
         collection.full_catalog, collection.collection_id
@@ -729,10 +929,16 @@ def main():
         .apply(clean_date_format)
     )
 
-    logger.info(
-        f"[COMBINED_CREATORS] CREATING COMBINED CREATORS for {collection.collection_id} , at: {datetime.now()}"
-    )
-    collection = clean_creators(collection)
+    if "COMBINED_CREATORS" not in list(collection.full_catalog):
+        logger.info(
+            f"[COMBINED_CREATORS] CREATING COMBINED CREATORS for {collection.collection_id} , at: {datetime.now()}"
+        )
+        collection = clean_creators(collection)
+    elif collection.full_catalog["COMBINED_CREATORS"].isnull().all():
+        logger.info(
+            f"[COMBINED_CREATORS] CREATING COMBINED CREATORS for {collection.collection_id} , at: {datetime.now()}"
+        )
+        collection = clean_creators(collection)
 
     logger.info(
         f"[COMBINED_CREATORS] Splitting COMBINED_CREATORS into COMBINED_CREATORS_PERS"
@@ -746,16 +952,23 @@ def main():
     collection = create_authorities_report(collection, "CORPS")
     collection = create_authorities_report(collection, "GEO")
     collection = create_authorities_report(collection, "WORKS")
+    collection = create_authorities_report(collection, "SUBJECT")
 
-    logger.info(f'[CURRENT_OWNER] filling CURRENT OWNER columns for the {collection.collection_id} catalog')
-    collection.full_catalog = add_current_owner(collection.full_catalog,
-                                                collection_id=collection.collection_id)
+    logger.info(
+        f"[CURRENT_OWNER] filling CURRENT OWNER columns for the {collection.collection_id} catalog"
+    )
+    collection.full_catalog = add_current_owner(
+        collection.full_catalog, collection_id=collection.collection_id
+    )
 
     logger.info(f"[BARCODE] Changing BARDODE column from string to integer")
-
-    collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(
-        lambda x: x.rstrip(".0")
-    )
+    if not collection.full_catalog["BARCODE"].isnull().all():
+        collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].replace(
+            np.nan, ""
+        )
+        collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(
+            lambda x: x.rstrip(".0")
+        )
 
     logger.info(f"[ARCHIVAL_MATERIAL] Starting to work on ARCHIVAL_MATERIAL column")
     collection.full_catalog = check_values_against_cvoc(
@@ -796,9 +1009,10 @@ def main():
         lambda x: x.rstrip(".0")
     )
 
-    logger.info(f'[CREDIT] Add credits to the collection')
-    collection.full_catalog = add_credits(collection.full_catalog, collection.collection_id)
-
+    logger.info(f"[CREDIT] Add credits to the collection")
+    collection.full_catalog = add_credits(
+        collection.full_catalog, collection.collection_id
+    )
 
     # logger.info(f"[DATE_CATALOGING] Checking and Validating DATE_CATALOGING column")
     # collection.full_catalog = check_cataloging_date(collection.full_catalog)
@@ -830,10 +1044,16 @@ def main():
         )
         collection = add_number_of_files(collection)
 
+        # TODO
+        # collection = replace_with_authorities_from_NLI(collection)
+
         logger.info(
             f"updating the preprocessed DataFrame in Google Sheets - "
             f"as final copy: {collection.collection_id}_Final_to_alma_{collection.dt_now}"
         )
+        collection.full_catalog = collection.full_catalog.replace(np.nan, "")
+        collection.full_catalog.index = collection.full_catalog.index.astype(str)
+        collection.full_catalog.index.name = "סימול"
 
         update_df_in_gdrive(collection, copy=True)
 

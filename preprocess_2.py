@@ -88,9 +88,7 @@ def main():
     logger.info(
         "[MARC 700/710] Creating  MARC 700/710 - Personalities and Corporate bodies access points"
     )
-    collection.df_final_data = marc.create_MARC_700_710(
-        collection.df_final_data
-    )
+    collection.df_final_data = marc.create_MARC_700_710(collection.df_final_data)
 
     # create 535 (EXTENT) (היקף)
     logger.info("[MARC 535] Creating  MARC 535 - location of originals ")
@@ -107,6 +105,10 @@ def main():
     # create 630 (WORKS) (יצירות)
     logger.info("[MARC 630] Creating  MARC 630 - WORKS ")
     collection = marc.create_MARC_630(collection)
+
+    # create 650 (Subjects) (נושאים)
+    logger.info("[MARC 630] Creating  MARC 630 - SUBJECTS ")
+    collection.df_final_data = marc.create_MARC_650(collection.df_final_data)
 
     # create 041 (LANGUAGE) (שפה)
     logger.info("[MARC 041] Creating  MARC 041 - LANGUAGE")
@@ -256,7 +258,9 @@ def main():
     )
     collection = marc.create_MARC_650_branch(collection)
 
-    collection.df_final_data = marc.create_MARC_590_sponsors(collection.df_final_data, collection.branch)
+    collection.df_final_data = marc.create_MARC_590_sponsors(
+        collection.df_final_data, collection.branch
+    )
 
     # last text cleaning up of dataframe:
     collection.df_final_data = collection.df_final_data.replace(
