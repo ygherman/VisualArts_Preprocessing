@@ -187,6 +187,18 @@ def create_MARC_245(df):
             else ""
         )
 
+    if len(df[df["כותרת אנגלית"] != ""]) > 0:
+        last_2463_index = last_index_of_reoccurring_column(df, "2463")
+        if last_2463_index > 0:
+            col_name_246 = f"2463_{last_2463_index}"
+        else:
+            col_name_246 = "2463"
+        df[col_name_246] = df["כותרת אנגלית"].apply(
+            lambda x: f"$$iEnglish title: $$a{str(x)}"
+            if str(x).strip().lstrip() != ""
+            else ""
+        )
+
     return df
 
 
