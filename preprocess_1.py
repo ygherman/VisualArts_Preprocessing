@@ -250,12 +250,22 @@ def clean_record_title(df):
     df.UNITITLE = df.UNITITLE.astype(str)
 
     def fix_title(title):
-        if title == "" or title == np.nan or title == " " or title is np.nan:
+        if (
+            title == ""
+            or title == np.nan
+            or title == " "
+            or title is np.nan
+            or title == "nan"
+        ):
             return ""
-        return title.replace(",", " -", 1).lstrip().replace("\n", " ")
+        try:
+            return title.replace(",", " -", 1).lstrip().replace("\n", " ")
+        except Exception as e:
+            sys.stderr.write(f"problem with: [{title}, exception: {e}]")
+            return ""
 
     df["UNITITLE"] = df["UNITITLE"].apply(fix_title)
-    if "UNITITLE_ENG" in list(df.columns):
+    if "UNITITLE_ENG" in list(df.columns) and df["UNITITLE_ENG"].notna().all():
         df["UNITITLE_ENG"] = df["UNITITLE_ENG"].apply(fix_title)
 
     return df
@@ -885,11 +895,22 @@ def main():
 
     logger.info(f"[PUBLICATION_COUNTRY] checking columns values")
 
-    collection.full_catalog = check_values_against_cvoc(
-        collection.full_catalog,
-        "PUBLICATION_COUNTRY",
-        Authority_instance.countries_mapping_dict,
-    )
+    if list(set(collection.full_catalog["PUBLICATION_COUNTRY"].tolist()))[1] == "heb":
+        collection.full_catalog = check_values_against_cvoc(
+            collection.full_catalog,
+            "PUBLICATION_COUNTRY",
+            Authority_instance.countries_mapping_dict,
+        )
+
+    elif list(set(collection.full_catalog["PUBLICATION_COUNTRY"].tolist()))[1] == "ara":
+        collection.full_catalog = check_values_against_cvoc(
+            collection.full_catalog,
+            "PUBLICATION_COUNTRY",
+            Authority_instance.countries_mapping_dict_ara,
+        )
+
+    else:
+        sys.stderr.write(f"Did not find the right language")
 
     if "TO_DELETE" in list(collection.full_catalog.columns):
         logger.info(
@@ -1052,6 +1073,7 @@ def main():
             f"as final copy: {collection.collection_id}_Final_to_alma_{collection.dt_now}"
         )
         collection.full_catalog = collection.full_catalog.replace(np.nan, "")
+        collection.full_catalog = collection.full_catalog.replace("nan", "")
         collection.full_catalog.index = collection.full_catalog.index.astype(str)
         collection.full_catalog.index.name = "סימול"
 

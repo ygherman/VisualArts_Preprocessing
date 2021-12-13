@@ -70,10 +70,16 @@ def main():
     logger.info(f"[245] Creating  MARC 245 - UNITITLE")
     collection.df_final_data = marc.create_MARC_245(collection.df_final_data)
 
+    if str(input("Copyright Analysis already done? (Y/N)")).lower() == "n":
+
+        copyright_analysis_done = False
+    else:
+        copyright_analysis_done = True
+
     # creator unknown, multiple creators
     logger.info("[MARC 952$g multiple and unknown creators] creating 952$g")
     collection.df_final_data = marc.create_MARC_952_mul_unknown_creators(
-        collection.df_final_data
+        collection.df_final_data, copyright_analysis_done
     )
 
     # create 110 and 100 (FIRST CREATORS CORPS and PERS) (יוצר ראשון - איש/ יוצר ראשון = מוסד)
@@ -102,6 +108,14 @@ def main():
     logger.info("[MARC 655] Creating  MARC 655 - ARCHIVAL MATERIAL ")
     collection.df_final_data = marc.create_MARC_655(collection.df_final_data)
 
+    # create 600 (PERSNAME) (יצירות)
+    logger.info("[MARC 600] Creating  MARC 600 - pername ")
+    collection = marc.create_MARC_600(collection)
+
+    # create 610 (CORPSNAME) (יצירות)
+    logger.info("[MARC 610] Creating  MARC 610 - CORPNAME ")
+    collection = marc.create_MARC_610(collection)
+
     # create 630 (WORKS) (יצירות)
     logger.info("[MARC 630] Creating  MARC 630 - WORKS ")
     collection = marc.create_MARC_630(collection)
@@ -119,12 +133,6 @@ def main():
     ### fields: 939, 903, 952
     ####################################################
     logger.info("[MARC 939, 903, 952] Creating default copyright fields")
-
-    if str(input("Copyright Analysis already done? (Y/N)")).lower() == "n":
-
-        copyright_analysis_done = False
-    else:
-        copyright_analysis_done = True
 
     if not copyright_analysis_done:
         collection.df_final_data = marc.create_MARC_default_copyright(
@@ -283,6 +291,7 @@ def main():
     ###############################################
     elapsed = timeit.default_timer() - start_time
     logger.info(f"Execution Time: {elapsed}")
+    print(collection.google_sheet_file_id)
 
 
 if __name__ == "__main__":
