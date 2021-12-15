@@ -114,6 +114,7 @@ def clean_date_format(string_date):
     logger = logging.getLogger(__name__)
     string_date_to_datetime = ""
     date_formats_type1 = [
+        "%d-%m-%y",
         "%Y-%m-%d",
         "%Y-%d-%m",
         "%Y-%-m-%d",
@@ -131,6 +132,7 @@ def clean_date_format(string_date):
         "%m/%d/%y %H:%M",
         "%d-%m-%Y",
         "%d.%m.%Y",
+        "%d.%m.%y",
     ]
 
     date_formats_6 = [

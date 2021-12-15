@@ -248,7 +248,10 @@ class Authority:
             spreadsheet, "סוגי אישים-תפקידים"
         )
         df_creator_pers_role = df_creator_pers_role.rename(
-            columns={"מילות מפתח - סוגי אישים בפרוייקט": "CREATOR_PERS_ROLE"}
+            columns={
+                "מילות מפתח - סוגי אישים בפרוייקט": "CREATOR_PERS_ROLE",
+                "מילות מפתח - סוגי אישים בפרוייקט ערבית": "CREATORS_PERS_ROLE_ARA",
+            }
         )
         df_catalogers, cataloger_cols = create_df_from_gs(spreadsheet, "שם הרושם")
         df_catalogers = df_catalogers.set_index("שם הרושם")
@@ -259,9 +262,13 @@ class Authority:
         countries_mapping_dict = pd.Series(
             df_countries.index.values, index=df_countries.index.values
         ).to_dict()
+        countries_mapping_dict_ara = pd.Series(
+            df_countries["מדינת פרסום בערבית"].values,
+        )
 
         roles_dict = {
-            "pers_roles": df_creator_pers_role["CREATOR_PERS_ROLE"].tolist(),
+            "pers_roles": df_creator_pers_role["CREATOR_PERS_ROLE"].tolist()
+            + df_creator_pers_role["CREATORS_PERS_ROLE_ARA"].tolist(),
             "corps_roles": df_creator_corps_role["CREATOR_CROPS_ROLE"].tolist(),
         }
 
@@ -315,6 +322,7 @@ class Authority:
         self.privacy_search_dict = privacy_search_dict
         self.mapper_655_to_999 = mapper_655_to_999
         self.df_subject_mapper = df_subjects_mapper
+        self.countries_mapping_dict_ara = countries_mapping_dict_ara
 
 
 if __name__ != "__main__":

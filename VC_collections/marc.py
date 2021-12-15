@@ -65,7 +65,9 @@ def create_MARC_093(df, collection_id):
             f"Please enter the hebrew name of the collection {collection_id}: \n"
         )
 
-    df["093"] = df["093"] + "$$d" + collection_name_heb
+    collection_name_eng = Authority_instance.df_credits.loc[collection_id, "שם הארכיון באנגלית"]
+
+    df["093"] = df["093"] + "$$d" + collection_name_heb + "$$e" + collection_name_eng
 
     df = drop_col_if_exists(df, "911")
     df = drop_col_if_exists(df, "שם האוסף")
@@ -311,7 +313,7 @@ def create_MARC_500(df):
             "הערות גלוי למשתמש קצה" in list(df.columns.values)
             and row["הערות גלוי למשתמש קצה"] != ""
         ):
-            new_value = new_value + "הערות: " + row["הערות גלוי למשתמש קצה"] + "; "
+            new_value = new_value + "הערות: " + str(row["הערות גלוי למשתמש קצה"]) + "; "
         if (
             "מילות מפתח_מקומות" in list(df.columns.values)
             and row["מילות מפתח_מקומות"] != ""
@@ -600,7 +602,7 @@ def find_unknown_multiple_in_column(row: pd.Series, col_name: str):
     return multiple_creators, unknown_roles, new_creators
 
 
-def create_MARC_952_mul_unknown_creators(df):
+def create_MARC_952_mul_unknown_creators(df, copyright_analysis_done):
     # TODO Add check if 1xx is empty then 245 needs to change from first indicator 1 to 0 - Where?
 
     df["952_g"] = ""
@@ -654,12 +656,13 @@ def create_MARC_952_mul_unknown_creators(df):
         if len(new_creators) > 1:
             df.loc[index, "יוצרים"] = ";".join(new_creators)
 
-        if len(multiple_creators) > 0:
-            field_952g += "Not all creators are cataloged; "
-        if len(unknown_roles) > 0:
-            field_952g += "Creator undetermined: " + ", ".join(unknown_roles)
-        if len(field_952g) > 3:
-            df.loc[index, "952_g"] = field_952g
+        if not copyright_analysis_done:
+            if len(multiple_creators) > 0:
+                field_952g += "Not all creators are cataloged; "
+            if len(unknown_roles) > 0:
+                field_952g += "Creator undetermined: " + ", ".join(unknown_roles)
+            if len(field_952g) > 3:
+                df.loc[index, "952_g"] = field_952g
     return df
 
 
@@ -1695,8 +1698,9 @@ def create_MARC_600(collection):
         df = df.fillna("")
 
         df = drop_col_if_exists(df, "6001")
+        collection.df_final_data = df
 
-    return df
+    return collection
 
 
 def create_MARC_610(collection):
@@ -1724,8 +1728,9 @@ def create_MARC_610(collection):
     df = df.fillna("")
 
     df = drop_col_if_exists(df, "6102")
+    collection.df_final_data = df
 
-    return df
+    return collection
 
 
 def create_MARC_630(collection):
@@ -2194,6 +2199,7 @@ def add_MARC_597(df):
     df["597"] = (
         "$$a" + df["קרדיט עברית"].astype(str) + "$$a" + df["קרדיט אנגלית"].astype(str)
     )
+    df["597"] = df["597"].str.replace(r"\n", " ", regex=True)
     df = drop_col_if_exists(df, "קרדיט עברית")
     df = drop_col_if_exists(df, "קרדיט אנגלית")
 
@@ -2219,9 +2225,15 @@ def export_MARCXML_final_table(collection):
 
 def create_MARC_255(df):
     if "קנה מידה" in list(df.columns):
-        df["255"] = df["קנה מידה"].map(
-            lambda x: "$$aקנה מידה [" + str(x) + "]" if str(x).strip() != "" else ""
-        )
+        df["255"] = df["קנה מידה"]
+        df = explode_col_to_new_df(df, "255")
+        cols = [x for x in list(df.columns) if "255" in x]
+        for col in cols:
+            df[col] = df[col].map(
+                lambda x: "$$aקנה מידה [" + str(x) + "]" if str(x).strip() != "" else ""
+            )
+        df = drop_col_if_exists(df, "קנה מידה")
+        df = drop_col_if_exists(df, "255")
         return df
 
 

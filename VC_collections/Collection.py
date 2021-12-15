@@ -791,8 +791,12 @@ class Collection:
 
         start_time = time.time()
         counter = 1
+        if str(input(f"keep collection record?")).lower() == "y":
+            keep = True
 
         for index, row in df.iterrows():
+            if row["351"] == "$cSection Record" and not keep:
+                continue
 
             record = Record()
 
