@@ -242,7 +242,8 @@ class Authority:
             spreadsheet, "סוגי ארגונים-תפקידים"
         )
         df_creator_corps_role = df_creator_corps_role.rename(
-            columns={"סוגי ארגונים": "CREATOR_CROPS_ROLE"}
+            columns={"סוגי ארגונים": "CREATOR_CROPS_ROLE",
+                     "מילות מפתח - סוגי ארגונים בפרוייקט ערבית": "CREATORS_PERS_ROLE_ARA"}
         )
         df_creator_pers_role, pers_role_cols = create_df_from_gs(
             spreadsheet, "סוגי אישים-תפקידים"
@@ -262,9 +263,8 @@ class Authority:
         countries_mapping_dict = pd.Series(
             df_countries.index.values, index=df_countries.index.values
         ).to_dict()
-        countries_mapping_dict_ara = pd.Series(
-            df_countries["מדינת פרסום בערבית"].values,
-        )
+
+        countries_mapping_dict_ara = df_countries.set_index("מדינת פרסום בערבית").to_dict()["MARC"]
 
         roles_dict = {
             "pers_roles": df_creator_pers_role["CREATOR_PERS_ROLE"].tolist()
@@ -277,6 +277,13 @@ class Authority:
         language_mapping_dict = pd.Series(
             df_languages.index.values, index=df_languages.index.values
         ).to_dict()
+
+        language_mapping_dict_ara = (
+            df_languages.loc[df_languages["שם שפה ערבית"] != ""]
+            .reset_index()
+            .set_index("שם שפה ערבית")[["קוד שפה"]]
+            .to_dict()["קוד שפה"]
+        )
 
         df_credits, credits_col = create_df_from_gs(spreadsheet, "קרדיטים")
         df_credits = df_credits.set_index("סימול הארכיון")
@@ -314,6 +321,7 @@ class Authority:
         self.countries_mapping_dict = countries_mapping_dict
         self.df_languages = df_languages
         self.language_mapping_dict = language_mapping_dict
+        self.language_mapping_dict_ara = language_mapping_dict_ara
         self.roles_dict = roles_dict
         self.df_level = df_level
         self.df_credits = order_credits(df_credits)

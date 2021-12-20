@@ -520,7 +520,7 @@ def clean_creators(collection: Collection) -> Collection:
     df = replace_NaN(df)
     logger = logging.getLogger(__name__)
 
-    authority_role_list = list(
+    authority_role_list_ = list(
         set(Authority_instance.df_creator_corps_role["CREATOR_CROPS_ROLE"])
     ) + list(set(Authority_instance.df_creator_pers_role["CREATOR_PERS_ROLE"]))
 

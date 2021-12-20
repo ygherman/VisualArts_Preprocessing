@@ -65,7 +65,9 @@ def create_MARC_093(df, collection_id):
             f"Please enter the hebrew name of the collection {collection_id}: \n"
         )
 
-    collection_name_eng = Authority_instance.df_credits.loc[collection_id, "שם הארכיון באנגלית"]
+    collection_name_eng = Authority_instance.df_credits.loc[
+        collection_id, "שם הארכיון באנגלית"
+    ]
 
     df["093"] = df["093"] + "$$d" + collection_name_heb + "$$e" + collection_name_eng
 
@@ -1108,8 +1110,9 @@ def create_MARC_041(df):
     :param df: the entire table
     :return: the new data frame with the new MARC 041 encoded Field
     """
+    logger = logging.getLogger()
     col = "שפה"
-    # TODO if column שפה is empty, then it is dropped. Why?
+    # TODO ARABIC
     try:
         col
     except NameError:
@@ -1120,19 +1123,35 @@ def create_MARC_041(df):
 
         for index, row in df.iterrows():
             if row["שפה"] == "":
-                # if row['סוג חומר'] ==
                 continue
             languages = row["שפה"].split(";")
-            try:
-                new_lang = [
-                    "$$a" + language_mapper["קוד שפה"][k]
-                    for k in languages
-                    if len(languages) > 0
-                ]
-                df.loc[index, "041"] = "".join(new_lang)
-            except:
-                print("problem with ", index)
-                sys.stderr.write(f"problem with languages in {index}")
+            new_lang = []
+            for lang in languages:
+                if check_lang(lang) == "ara":
+                    try:
+                        new_lang.append("$$a" + Authority_instance.language_mapping_dict_ara[lang])
+                    except Exception as e:
+                        logger.error(
+                            f"Didn't find language code for: {lang}, at index: {index}"
+                        )
+                else:
+                    try:
+                        new_lang.append("$$a" + language_mapper["קוד שפה"][lang])
+                    except Exception as e:
+                        logger.error(
+                            f"Didn't find language code for: {lang}, at index: {index}"
+                        )
+
+            # try:
+            #     new_lang = [
+            #         "$$a" + language_mapper["קוד שפה"][k]
+            #         for k in languages
+            #         if len(languages) > 0
+            #     ]
+            #     df.loc[index, "041"] = "".join(new_lang)
+            # except:
+            #     print("problem with ", index)
+            #     sys.stderr.write(f"problem with languages in {index}")
             field_008 = list(row["008"])
 
             # insert MARC langauge code in positions 35-37
@@ -1238,20 +1257,34 @@ def map_countries(countries_list: str) -> (list, str):
 
     @param countries_list:
     """
+    logger = logging.getLogger()
     countries_code_mapper = Authority_instance.df_countries.to_dict()["MARC"]
+    countries_code_mapper_arab = Authority_instance.countries_mapping_dict_ara
 
     countries = countries_list.split(";")
     countries = list(filter(None, countries))
-    field_008_country = None
+    field_008_country = list()
+    countries_not_found = list()
     first_country = None
     if len(countries) > 0:
-        try:
-            field_008_country = [
-                "$$a" + countries_code_mapper[k] for k in countries if len(k) > 0
-            ]
-        except KeyError as e:
-            sys.stderr.write(f"This is not a country {e}! (please correct")
-            sys.exit()
+
+        for country in countries:
+            if check_lang(country) == "ara":
+                try:
+                    field_008_country.append("$$a" + countries_code_mapper_arab[country])
+                except Exception as e:
+                    logger.error(f'[Arabic country names mapper] problem with {country}, Exception {e}')
+                    countries_not_found.append(country)
+
+            elif check_lang(country) == "heb":
+                try:
+                    field_008_country.append("$$a" + countries_code_mapper[country])
+                except Exception as e:
+                    logger.error(f'[Hebrew country names mapper] problem with {country}, Exception {e}')
+                    countries_not_found.append(country)
+
+        if len(countries_not_found) > 0:
+            sys.stderr.write(f'please correct following countries: {countries_not_found}')
         if len(field_008_country) > 1:
             first_country = "vp#"
         else:
