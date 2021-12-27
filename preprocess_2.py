@@ -292,6 +292,7 @@ def main():
     elapsed = timeit.default_timer() - start_time
     logger.info(f"Execution Time: {elapsed}")
     print(collection.google_sheet_file_id)
+    print(collection.data_path_processed)
 
 
 if __name__ == "__main__":

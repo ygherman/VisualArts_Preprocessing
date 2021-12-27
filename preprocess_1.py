@@ -895,14 +895,24 @@ def main():
 
     logger.info(f"[PUBLICATION_COUNTRY] checking columns values")
 
-    if list(set(collection.full_catalog["PUBLICATION_COUNTRY"].tolist()))[1] == "heb":
+    if (
+        check_lang(
+            list(set(collection.full_catalog["PUBLICATION_COUNTRY"].tolist()))[1]
+        )
+        == "heb"
+    ):
         collection.full_catalog = check_values_against_cvoc(
             collection.full_catalog,
             "PUBLICATION_COUNTRY",
             Authority_instance.countries_mapping_dict,
         )
 
-    elif list(set(collection.full_catalog["PUBLICATION_COUNTRY"].tolist()))[1] == "ara":
+    elif (
+        check_lang(
+            list(set(collection.full_catalog["PUBLICATION_COUNTRY"].tolist()))[1]
+        )
+        == "ara"
+    ):
         collection.full_catalog = check_values_against_cvoc(
             collection.full_catalog,
             "PUBLICATION_COUNTRY",
@@ -910,7 +920,24 @@ def main():
         )
 
     else:
-        sys.stderr.write(f"Did not find the right language")
+        sys.stderr.write(f"Did not find the right country")
+
+    logger.info(f"[LANGUAGE] checking columns values")
+    if check_lang(list(set(collection.full_catalog["LANGUAGE"].tolist()))[1]) == "heb":
+        collection.full_catalog = check_values_against_cvoc(
+            collection.full_catalog,
+            "LANGUAGE",
+            Authority_instance.language_mapping_dict,
+        )
+
+    elif (
+        check_lang(list(set(collection.full_catalog["LANGUAGE"].tolist()))[1]) == "ara"
+    ):
+        collection.full_catalog = check_values_against_cvoc(
+            collection.full_catalog,
+            "LANGUAGE",
+            Authority_instance.language_mapping_dict_ara,
+        )
 
     if "TO_DELETE" in list(collection.full_catalog.columns):
         logger.info(
@@ -920,8 +947,9 @@ def main():
             collection.full_catalog["TO_DELETE"] == "כן", "ROOTID"
         ] = collection.collection_id
 
-    logger.info("[UNITITLE] Cleaning records title")
-    collection.full_catalog = clean_record_title(collection.full_catalog)
+    # TODO not needed anymore
+    # logger.info("[UNITITLE] Cleaning records title")
+    # collection.full_catalog = clean_record_title(collection.full_catalog)
 
     logger.info("[ENG_UNITITLE_COLLECTION Get English title from credits table")
     collection.full_catalog = add_english_collection_title(
