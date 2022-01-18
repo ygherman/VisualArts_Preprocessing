@@ -1,14 +1,15 @@
 from typing import io
-=
+
 
 from unittest import TestCase, mock
 from pathlib import Path
 
 import preprocess_2_on_master
-from unittest.mock import import patch
+
+# from unittest.mock import import patch
+
 
 class Test(TestCase):
-
     def test_find_collection_id(self):
         test1 = "ArBe"
         test2 = "ArBe-01"
@@ -26,11 +27,10 @@ class Test(TestCase):
     def test_create_dataframe(self):
         self.fail()
 
-    @patch('gspread.authorize')
+    @patch("gspread.authorize")
     def test_sheet(self, authorizeMocka):
         sheet = authorizeMocka.return_value.open_by_url.return_value
         type(sheet).sheet1 = mock.PropertyMock(return_value=None)
         with io.StringIO() as 輸出:
-            call_command('顯示全部sheet狀態', stdout=輸出)
-            self.assertIn('sheet內底無工作表', 輸出.getvalue())
-
+            # call_command('顯示全部sheet狀態', stdout=輸出)
+            self.assertIn("sheet內底無工作表", 輸出.getvalue())

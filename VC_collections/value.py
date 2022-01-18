@@ -113,6 +113,7 @@ clean_name = lambda x: re.sub(r"(?<=[.,])(?=[^\s])", r" ", x)
 def remove_empty_key_from_dict(dict):
     return {k: v for k, v in dict.items() if v}
 
+
 def clean_date_format(string_date):
     logger = logging.getLogger(__name__)
     string_date_to_datetime = ""

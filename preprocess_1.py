@@ -990,7 +990,7 @@ def main():
         collection = clean_creators(collection)
 
     logger.info(
-        f"[COMBINED_CREATORS] Splitting COMBINED_CREATORS into COMBINED_CREATORS_PERS"
+        f"[COMBINED_CREATORS] Splitting COMBINED_CREATORS into COMBINED_CREATORS_PERS "
         f"and COMBINED_CREATORS_CORPS columns according to roles"
     )
     collection.full_catalog = split_creators_by_type(

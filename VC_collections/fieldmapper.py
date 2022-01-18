@@ -314,6 +314,7 @@ collection_field_mapper = {
     "תאריך הרישום": "DATE_CATALOGING",
     "הערותסוקר": "NOTES",
     "תקציר": "SUMMARY",
+    "תקציראנגלית": "SUMMARY_ENG"
 }
 
 final_fields_back_mapper = {
@@ -378,6 +379,7 @@ final_fields_back_mapper = {
     "TRANSLATED_UNITITLE": "כותרת מתורגמת",
     "CONFIDENTIALITY": "תאריך פקיעת החיסיון",
     "SUMMARY": "תקציר",
+    "SUMMARY_ENG": "תקציר אנגלית",
     "CREDIT_HEB": "קרדיט עברית",
     "CREDIT_ENG": "קרדיט אנגלית",
 }
@@ -435,6 +437,7 @@ final_column_order = [
     "חומרים קשורים",
     "תאריך פקיעת החיסיון",
     "תקציר",
+    "תקציר אנגלית",
     "קרדיט עברית",
     "קרדיט אנגלית",
 ]

@@ -51,7 +51,7 @@ def split_creators_by_type(df, col_name):
                 add_pers_creators.append(
                     str(row["CREATOR_PERS"]).strip()
                     + " ["
-                    + str(row["CREATOR_PERS_ROLE"]).strip()
+                    + str(row["CREATORS_PERS_ROLE"]).strip()
                     + "]"
                 )
             if str(row["CREATOR_CORP"]) != "":
@@ -241,7 +241,7 @@ def is_corp(creator, df_corp_roles):
     :param df_corp_roles: the dataframe of the roles to check against
     :return: True if the creator is a Corporation, False if otherwise
     """
-    if find_role(creator) in df_corp_roles.loc[:, "CREATOR_CROPS_ROLE"].tolist():
+    if find_role(creator) in df_corp_roles.loc[:, "CREATORS_CORPS_ROLE"].tolist():
         return True
     else:
         return False
@@ -254,7 +254,7 @@ def is_pers(creator, df_pers_roles):
     :param df_pers_roles: the dataframe of the roles to check against
     :return: True if the creator is a Person, False if otherwise
     """
-    if find_role(creator) in df_pers_roles.loc[:, "CREATOR_PERS_ROLE"].tolist():
+    if find_role(creator) in df_pers_roles.loc[:, "CREATORS_PERS_ROLE"].tolist():
         return True
     else:
         return False
@@ -348,21 +348,31 @@ def map_role_to_relator(role, df, lang, mode="PERS"):
     if mode == "PERS":
         if lang == "heb":
             return df.loc[
-                df[df["CREATOR_PERS_ROLE"] == role].index.item(), "RELATOR_HEB"
+                df[df["CREATORS_PERS_ROLE"] == role].index.item(), "RELATOR_HEB"
             ]
         if lang == "lat" or lang == "eng":
             return df.loc[
-                df[df["CREATOR_PERS_ROLE"] == role].index.item(), "RELATOR_ENG"
+                df[df["CREATORS_PERS_ROLE"] == role].index.item(), "RELATOR_ENG"
+            ]
+
+        if lang == "ara":
+            return df.loc[
+                df[df["CREATORS_PERS_ROLE"] == role].index.item(), "RELATOR_ARA"
             ]
     elif mode == "CORPS":
         if lang == "heb":
             return df.loc[
-                df[df["CREATOR_CROPS_ROLE"] == role].index.item(), "RELATOR_HEB"
+                df[df["CREATORS_CORPS_ROLE"] == role].index.item(), "RELATOR_HEB"
             ]
 
         if lang == "eng" or lang == "lat":
             return df.loc[
-                df[df["CREATOR_CROPS_ROLE"] == role].index.item(), "RELATOR_ENG"
+                df[df["CREATORS_CORPS_ROLE"] == role].index.item(), "RELATOR_ENG"
+            ]
+
+        if lang == "ara":
+            return df.loc[
+                df[df["CREATORS_CORPS_ROLE"] == role].index.item(), "RELATOR_ARA"
             ]
 
 
@@ -403,13 +413,22 @@ def clean_empty_indexes(indexes_roles_not_found):
     return new_indexes_roles_not_found
 
 
-def map_relators(df, authority_role_list):
+def map_relators(df):
     """
 
     :param authority_role_list:
     :param df:
     :return:
     """
+
+    authority_role_list_heb = list(
+        set(Authority_instance.df_creator_corps_role["CREATORS_CORPS_ROLE"])
+    ) + list(set(Authority_instance.df_creator_pers_role["CREATORS_PERS_ROLE"]))
+
+    authority_role_list_ara = list(
+        set(Authority_instance.df_creator_corps_role["CREATORS_CORPS_ROLE_ARA"])
+    ) + list(set(Authority_instance.df_creator_pers_role["CREATORS_PERS_ROLE_ARA"]))
+
     df["COMBINED_CREATORS"] = df["COMBINED_CREATORS"].str.strip("\n")
     df["COMBINED_CREATORS"] = df["COMBINED_CREATORS"].str.rstrip("")
 
@@ -419,19 +438,37 @@ def map_relators(df, authority_role_list):
     role_not_found = []
 
     indexes_roles_not_found = []
+    flag_repair = False
     for index, row in df.iterrows():
         for creator in str(row["COMBINED_CREATORS"]).strip().split(";"):
             temp_role = find_role(creator)
-            roles.append(temp_role)
-            if temp_role.strip() not in authority_role_list:
-                indexes_roles_not_found.append((temp_role, index))
+            if check_lang(temp_role) == "heb":
+                roles.append(temp_role)
+                if temp_role.strip() not in authority_role_list_heb:
+                    indexes_roles_not_found.append((temp_role, index))
+            elif check_lang(temp_role) == "ara":
+                roles.append(temp_role)
+                if temp_role.strip() not in authority_role_list_ara:
+                    indexes_roles_not_found.append((temp_role, index))
+            elif None:
+                flag_repair = True
+                logger.error(
+                    f"There is no Role for the creator: {creator}, at index: {index}"
+                )
+
+    if flag_repair:
+        sys.stderr.write("Please correct the list above. Main creators must have roles")
+        sys.exit()
 
     for role_1, index_1 in indexes_roles_not_found:
         temp_role_dict[role_1].append(index_1)
 
     # Check which role does not appear in the authority file of creators role (persons and corporates)
     for role in roles:
-        if role.strip() in authority_role_list:
+        if (
+            role.strip() in authority_role_list_heb
+            or role.strip() in authority_role_list_ara
+        ):
             continue
         else:
             role_not_found.append(role)
@@ -449,7 +486,6 @@ def map_relators(df, authority_role_list):
 
 def correct_relators(
     collection: Collection,
-    authority_role_list: list,
     roles: list,
     role_not_found: list,
     temp_role_dict: dict,
@@ -462,6 +498,12 @@ def correct_relators(
     :param role_not_found:
     :param temp_role_dict:
     """
+    authority_role_list = (
+        list(set(Authority_instance.df_creator_corps_role["CREATORS_CORPS_ROLE"]))
+        + list(set(Authority_instance.df_creator_pers_role["CREATORS_PERS_ROLE"]))
+        + list(set(Authority_instance.df_creator_corps_role["CREATORS_CORPS_ROLE_ARA"]))
+        + list(set(Authority_instance.df_creator_pers_role["CREATORS_PERS_ROLE_ARA"]))
+    )
 
     def create_error_report():
         """"""
@@ -520,10 +562,6 @@ def clean_creators(collection: Collection) -> Collection:
     df = replace_NaN(df)
     logger = logging.getLogger(__name__)
 
-    authority_role_list_ = list(
-        set(Authority_instance.df_creator_corps_role["CREATOR_CROPS_ROLE"])
-    ) + list(set(Authority_instance.df_creator_pers_role["CREATOR_PERS_ROLE"]))
-
     creators_cols = [col for col in df.columns if "CREATOR" in col]
 
     if "COMBINED_CREATORS" in creators_cols and len(creators_cols) == 1:
@@ -543,14 +581,12 @@ def clean_creators(collection: Collection) -> Collection:
 
     df["COMBINED_CREATORS"] = df["COLLECTION_CREATOR"] + ";" + df["COMBINED_CREATORS"]
 
-    roles, role_not_found, temp_role_dict = map_relators(df, authority_role_list)
+    roles, role_not_found, temp_role_dict = map_relators(df)
     df = clean_text_cols(df, "COMBINED_CREATORS")
     df = strip_whitespace_af_semicolon(df, "COMBINED_CREATORS")
 
     df = unique_creators(df)
-    correct_relators(
-        collection, authority_role_list, roles, role_not_found, temp_role_dict
-    )
+    correct_relators(collection, roles, role_not_found, temp_role_dict)
 
     df["COMBINED_CREATORS"] = df["COMBINED_CREATORS"].str.replace(";;", ";")
     collection.full_catalog = df
@@ -618,7 +654,7 @@ def fix_values_in_column(col, err, new_val):
     return err, col
 
 
-def fix_original(col, error_words, new_values):
+def fix_original(col: pd.Series, error_words: list, new_values: dict) -> object:
     error_words2possible_new_val = convert_dict(new_values)
     missing_errs = []
     error_words = list(filter(None, error_words))
@@ -638,7 +674,7 @@ def check_values_against_cvoc(df: pd.DataFrame, col_name: str, new_values: pd.Se
     df[col_name] = df[col_name].replace(np.nan, "")
     test_list = [x.split(";") for x in df[col_name].tolist()]
     vals_to_check = [item.strip() for sublist in test_list for item in sublist]
-    vals_to_check = list(set(vals_to_check))
+    vals_to_check = list(set(list(filter(None, vals_to_check))))
 
     values_not_found, df[col_name] = fix_original(
         df[col_name], vals_to_check, new_values
@@ -669,7 +705,13 @@ def check_values_against_cvoc(df: pd.DataFrame, col_name: str, new_values: pd.Se
 
 def check_lang(val):
     ad = alphabet_detector.AlphabetDetector()
-    lang = list(ad.detect_alphabet(val))[0].lower()
+    if val == "" or pd.isna(val):
+        return None
+    try:
+        lang = list(ad.detect_alphabet(val))[0].lower()
+    except IndexError:
+
+        return None
     eng_lang_mapping = (
         Authority_instance.df_languages.reset_index()
         .set_index("שם שפה אנגלית")["קוד שפה"]

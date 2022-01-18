@@ -112,6 +112,8 @@ def create_MARC_351_LDR(df: pd.DataFrame) -> pd.DataFrame:
     $c - Hierarchical level (NR)
 
     Also creates MARC LDR  based on hierarchical level.
+    position 07 = c - for collection Level
+    position 07 = d - for all other levels
             - 00000npd^a22^^^^^^a^4500  - for file and item level records
             - 00000npc^a22^^^^^^^^4500 - for all other levels
     :param df: The original Dataframe
@@ -120,10 +122,10 @@ def create_MARC_351_LDR(df: pd.DataFrame) -> pd.DataFrame:
 
     def define_LDR(hier):
 
-        if hier == "File Record" or hier == "Item Record":
-            return "00000npd#a22######a#4500"
+        if hier == "Fonds Record" or hier == "Section Record":
+            return "00000npc#a22######a#4500"
         else:
-            return "00000npc#a22########4500"
+            return "00000npd#a22########4500"
 
     if column_exists(df, "רמת תיאור"):
         col = "רמת תיאור"
@@ -151,35 +153,26 @@ def create_MARC_245(df):
     :return The Dataframe with the new 245 field
     """
 
-    col = "כותרת"
+    main_lang = check_lang(df.loc[df["5202"]!=""]["5202"].tolist()[1])
+    if main_lang == "heb":
+        main_title_col = "כותרת"
+    elif main_lang == "lat":
+        main_title_col = "כותרת אנגלית"
+    elif main_lang == "ara":
+        main_title_col = "כותרת ערבית"
 
     try:
-        col
-    except NameError:
-        print("col variable not defined")
-        pass
-    else:
-        df["24510"] = df[col].apply(
+        df["24510"] = df[main_title_col].apply(
             lambda x: "$$a" + str(x).strip()
             if str(x).strip() != ""
-            else print(f"bad header: [{x}")
+            else print(f"bad header: [{x}]")
         )
-        df = drop_col_if_exists(df, col)
+    except Exception as e:
+        sys.stderr.write(f'Main language could not be determined')
+    df = drop_col_if_exists(df, main_title_col)
 
-    if column_exists(df, "כותרתאנגלית"):
-        col = "כותרתאנגלית"
-    elif column_exists(df, "כותרת אנגלית"):
-        col = "כותרת אנגלית"
-    else:
-        return df
-
-    if column_exists(df, "כותרת משנה"):
-        df["כותרת משנה"] = df["כותרת משנה"].apply(
-            lambda x: "$$b" + str(x).strip() if str(x).strip().lstrip() != "" else ""
-        )
-        df["24510"] = df["24510"].astype(str) + df["כותרת משנה"]
-
-    if len(df[df["כותרת ערבית"] != ""]) > 0:
+    last_2463_index = 0
+    if main_lang == "heb" and column_exists(df, "כותרת ערבית") and len(df[df["כותרת ערבית"] != ""]) > 0:
         last_2463_index = last_index_of_reoccurring_column(df, "2463")
         if last_2463_index > 0:
             col_name_246 = f"2463_{last_2463_index}"
@@ -191,7 +184,19 @@ def create_MARC_245(df):
             else ""
         )
 
-    if len(df[df["כותרת אנגלית"] != ""]) > 0:
+    if main_lang == "ara" and column_exists(df, "כותרת") and len(df[df["כותרת"] != ""]) > 0:
+        last_2463_index = last_index_of_reoccurring_column(df, "2463")
+        if last_2463_index > 0:
+            col_name_246 = f"2463_{last_2463_index}"
+        else:
+            col_name_246 = "2463"
+        df[col_name_246] = df["כותרת"].apply(
+            lambda x: f"$$iכותרת עברית: $$a{str(x)}"
+            if str(x).strip().lstrip() != ""
+            else ""
+        )
+
+    if main_lang == "heb" and column_exists(df, "כותרת אנגלית") and len(df[df["כותרת אנגלית"] != ""]) > 0:
         last_2463_index = last_index_of_reoccurring_column(df, "2463")
         if last_2463_index > 0:
             col_name_246 = f"2463_{last_2463_index}"
@@ -202,6 +207,14 @@ def create_MARC_245(df):
             if str(x).strip().lstrip() != ""
             else ""
         )
+
+    if column_exists(df, "כותרת משנה"):
+        df["כותרת משנה"] = df["כותרת משנה"].apply(
+            lambda x: "$$b" + str(x).strip() if str(x).strip().lstrip() != "" else ""
+        )
+        df["24510"] = df["24510"].astype(str) + df["כותרת משנה"]
+
+
 
     return df
 
@@ -1126,14 +1139,26 @@ def create_MARC_041(df):
                 continue
             languages = row["שפה"].split(";")
             new_lang = []
+            languages_not_found = list()
             for lang in languages:
+                lang = lang.strip()
                 if check_lang(lang) == "ara":
                     try:
-                        new_lang.append("$$a" + Authority_instance.language_mapping_dict_ara[lang])
+                        new_lang.append(
+                            "$$a"
+                            + Authority_instance.df_languages.loc[
+                                Authority_instance.df_languages.loc[
+                                    Authority_instance.df_languages["שם שפה ערבית"]
+                                    == lang
+                                ].index[0],
+                                "קוד שפה",
+                            ]
+                        )
                     except Exception as e:
                         logger.error(
                             f"Didn't find language code for: {lang}, at index: {index}"
                         )
+                        languages_not_found.append(lang)
                 else:
                     try:
                         new_lang.append("$$a" + language_mapper["קוד שפה"][lang])
@@ -1141,6 +1166,7 @@ def create_MARC_041(df):
                         logger.error(
                             f"Didn't find language code for: {lang}, at index: {index}"
                         )
+                        languages_not_found.append(lang)
 
             # try:
             #     new_lang = [
@@ -1153,6 +1179,13 @@ def create_MARC_041(df):
             #     print("problem with ", index)
             #     sys.stderr.write(f"problem with languages in {index}")
             field_008 = list(row["008"])
+
+            if len(languages_not_found) > 0:
+                sys.stderr.write(
+                    f"please correct these languages: {languages_not_found}"
+                )
+                input()
+                sys.exit()
 
             # insert MARC langauge code in positions 35-37
             for i in range(35, 38):
@@ -1259,7 +1292,10 @@ def map_countries(countries_list: str) -> (list, str):
     """
     logger = logging.getLogger()
     countries_code_mapper = Authority_instance.df_countries.to_dict()["MARC"]
-    countries_code_mapper_arab = Authority_instance.countries_mapping_dict_ara
+    countries_code_mapper_arab = Authority_instance.df_countries_ara.to_dict()["MARC"]
+    countries_code_mapper_arab = {
+        k: v for k, v in countries_code_mapper_arab.items() if v
+    }
 
     countries = countries_list.split(";")
     countries = list(filter(None, countries))
@@ -1271,20 +1307,28 @@ def map_countries(countries_list: str) -> (list, str):
         for country in countries:
             if check_lang(country) == "ara":
                 try:
-                    field_008_country.append("$$a" + countries_code_mapper_arab[country])
+                    field_008_country.append(
+                        "$$a" + countries_code_mapper_arab[country]
+                    )
                 except Exception as e:
-                    logger.error(f'[Arabic country names mapper] problem with {country}, Exception {e}')
+                    logger.error(
+                        f"[Arabic country names mapper] problem with {country}, Exception {e}"
+                    )
                     countries_not_found.append(country)
 
             elif check_lang(country) == "heb":
                 try:
                     field_008_country.append("$$a" + countries_code_mapper[country])
                 except Exception as e:
-                    logger.error(f'[Hebrew country names mapper] problem with {country}, Exception {e}')
+                    logger.error(
+                        f"[Hebrew country names mapper] problem with {country}, Exception {e}"
+                    )
                     countries_not_found.append(country)
 
         if len(countries_not_found) > 0:
-            sys.stderr.write(f'please correct following countries: {countries_not_found}')
+            sys.stderr.write(
+                f"please correct following countries: {countries_not_found}"
+            )
         if len(field_008_country) > 1:
             first_country = "vp#"
         else:
