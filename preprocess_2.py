@@ -121,7 +121,7 @@ def main():
     collection = marc.create_MARC_630(collection)
 
     # create 650 (Subjects) (נושאים)
-    logger.info("[MARC 630] Creating  MARC 630 - SUBJECTS ")
+    logger.info("[MARC 650] Creating  MARC 650 - SUBJECTS ")
     collection.df_final_data = marc.create_MARC_650(collection.df_final_data)
 
     # create 041 (LANGUAGE) (שפה)
