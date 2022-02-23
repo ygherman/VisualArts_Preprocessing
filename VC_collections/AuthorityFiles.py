@@ -43,9 +43,7 @@ mapper_655_to_999 = {
 }
 
 
-mapper_999_to_LDR = {
-    
-}
+mapper_999_to_LDR = {}
 
 
 # def create_df_from_gs(spreadsheet, worksheet):

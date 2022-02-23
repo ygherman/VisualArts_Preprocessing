@@ -2,12 +2,17 @@ import logging
 import os
 import re
 import sys
+from collections import defaultdict
 from datetime import datetime
 from xml.dom import minidom
 
 import alphabet_detector
 import dateutil
 import numpy as np
+import pandas as pd
+import pymarc.marcxml
+from pymarc import XmlHandler
+from pymarc import XmlHandler, parse_xml
 from fuzzywuzzy import process
 
 from VC_collections.AuthorityFiles import *
@@ -153,13 +158,25 @@ def create_MARC_245(df):
     :return The Dataframe with the new 245 field
     """
 
-    main_lang = check_lang(df.loc[df["5202"]!=""]["5202"].tolist()[1])
-    if main_lang == "heb":
+    if (
+        column_exists(df, "כותרת אנגלית")
+        and not df.iloc[
+            1:,
+        ]["כותרת אנגלית"].empty
+    ):
+
+        main_lang = check_lang(
+            df.loc[df["5202"] != ""]["5202"].tolist()[1].replace("$$a", "")
+        )
+        if main_lang == "heb":
+            main_title_col = "כותרת"
+        elif main_lang == "lat":
+            main_title_col = "כותרת אנגלית"
+        elif main_lang == "ara":
+            main_title_col = "כותרת ערבית"
+
+    else:
         main_title_col = "כותרת"
-    elif main_lang == "lat":
-        main_title_col = "כותרת אנגלית"
-    elif main_lang == "ara":
-        main_title_col = "כותרת ערבית"
 
     try:
         df["24510"] = df[main_title_col].apply(
@@ -168,11 +185,15 @@ def create_MARC_245(df):
             else print(f"bad header: [{x}]")
         )
     except Exception as e:
-        sys.stderr.write(f'Main language could not be determined')
+        sys.stderr.write(f"Main language could not be determined")
     df = drop_col_if_exists(df, main_title_col)
 
     last_2463_index = 0
-    if main_lang == "heb" and column_exists(df, "כותרת ערבית") and len(df[df["כותרת ערבית"] != ""]) > 0:
+    if (
+        main_lang == "heb"
+        and column_exists(df, "כותרת ערבית")
+        and len(df[df["כותרת ערבית"] != ""]) > 0
+    ):
         last_2463_index = last_index_of_reoccurring_column(df, "2463")
         if last_2463_index > 0:
             col_name_246 = f"2463_{last_2463_index}"
@@ -184,7 +205,11 @@ def create_MARC_245(df):
             else ""
         )
 
-    if main_lang == "ara" and column_exists(df, "כותרת") and len(df[df["כותרת"] != ""]) > 0:
+    if (
+        main_lang == "ara"
+        and column_exists(df, "כותרת")
+        and len(df[df["כותרת"] != ""]) > 0
+    ):
         last_2463_index = last_index_of_reoccurring_column(df, "2463")
         if last_2463_index > 0:
             col_name_246 = f"2463_{last_2463_index}"
@@ -196,7 +221,11 @@ def create_MARC_245(df):
             else ""
         )
 
-    if main_lang == "heb" and column_exists(df, "כותרת אנגלית") and len(df[df["כותרת אנגלית"] != ""]) > 0:
+    if (
+        main_lang == "heb"
+        and column_exists(df, "כותרת אנגלית")
+        and len(df[df["כותרת אנגלית"] != ""]) > 0
+    ):
         last_2463_index = last_index_of_reoccurring_column(df, "2463")
         if last_2463_index > 0:
             col_name_246 = f"2463_{last_2463_index}"
@@ -213,8 +242,6 @@ def create_MARC_245(df):
             lambda x: "$$b" + str(x).strip() if str(x).strip().lstrip() != "" else ""
         )
         df["24510"] = df["24510"].astype(str) + df["כותרת משנה"]
-
-
 
     return df
 
@@ -336,6 +363,7 @@ def create_MARC_500(df):
             new_value = (
                 new_value + "מקומות המוזכרים בתיק: " + row["מילות מפתח_מקומות"] + "; "
             )
+        # TODO ckeck why 0 is dropped from barcode
         if "ברקוד" in list(df.columns.values) and row["ברקוד"] != "":
             new_value = new_value + "ברקוד: " + str(row["ברקוד"]) + "; "
 
@@ -585,6 +613,8 @@ def aleph_creators(df, col_name, mode="PERS", branch=None, with_relators=True):
 
 def remove_first_creator_from_700(df):
     for index, row in df.iterrows():
+        if row["יוצר_ראשון"] == "" or row["יוצר_ראשון"] == "[]":
+            continue
         if is_corp(row["יוצר_ראשון"], Authority_instance.df_creator_corps_role):
             df.loc[index, "יוצרים מוסדות"] = row["יוצרים מוסדות"].replace(
                 row["יוצר_ראשון"], ""
@@ -608,8 +638,10 @@ def find_unknown_multiple_in_column(row: pd.Series, col_name: str):
         creator = creator.strip()
         if "ריבוי" in find_name(creator):
             multiple_creators.append(find_role(creator))
+            continue
         elif "לא ידוע" in find_name(creator):
             unknown_roles.append(find_role(creator))
+            continue
         elif creator == "":
             continue
         else:
@@ -620,7 +652,8 @@ def find_unknown_multiple_in_column(row: pd.Series, col_name: str):
 def create_MARC_952_mul_unknown_creators(df, copyright_analysis_done):
     # TODO Add check if 1xx is empty then 245 needs to change from first indicator 1 to 0 - Where?
 
-    df["952_g"] = ""
+    df["24500"] = ""
+    df["952_g"] =""
 
     for index, row in df.iterrows():
         field_952g = "$$g"
@@ -630,54 +663,26 @@ def create_MARC_952_mul_unknown_creators(df, copyright_analysis_done):
             unknown_roles,
             new_creators,
         ) = find_unknown_multiple_in_column(row, "יוצרים")
-        # multiple_creators_pers, unknown_roles_pers, new_creators_pers = find_unknown_multiple_in_column(row,
-        #                                                                                                 "יוצרים אישים")
 
-        for creator in row["יוצרים"].split(";"):
-            if "ריבוי" in creator or "לא ידוע" in creator:
-                first_creator_val = ""
-                continue
-            else:
-                first_creator_val = creator
-                break
+        # check if 1xx is empty then 245 first indicator needs to change from  1 to 0
+        if len(new_creators) == 0:
+            df.loc[index, "24500"] = df.loc[index, "24510"]
+            df.loc[index, "24510"] = ""
+            df.loc[index, "יוצרים"] = new_creators
 
-        # multiple_creators = multiple_creators_corps + multiple_creators_pers
-        # unknown_roles = unknown_roles_corps + unknown_roles_pers
+        elif len(new_creators) >= 1:
+            df.loc[index, "יוצרים"] = ";".join(new_creators)
 
-        # new_creators = new_creators_corps + new_creators_pers
-        try:
-            if first_creator_val != "":
-                new_creators.insert(0, first_creator_val)
-                new_creators = list(dict.fromkeys(new_creators))
-        except Exception as e:
-            sys.stderr.write(f"Exception occured: {e}")
-
-        if len(new_creators) == 1 and new_creators[0] == "":
-            if len(unknown_roles) == 0:
-                sys.stderr.write(
-                    f"Error - problem with creators in index: {index}, unitid: {row['סימול']}"
-                )
-            else:
-                df.loc[index, "יוצרים"] = ""
         else:
-            df.loc[index, "יוצרים"] = ";".join(new_creators)
+            sys.stderr.write("problem")
+            input()
 
-        # if len(new_creators_pers) >= 1 and new_creators_pers[0] != '':
-        #     df.loc[index, "יוצרים אישים"] = ";".join(new_creators_pers)
-        #
-        # if len(new_creators_corps) >= 1 and new_creators_corps[0] != '':
-        #     df.loc[index, "יוצרים אישים"] = ";".join(new_creators_pers)
-
-        if len(new_creators) > 1:
-            df.loc[index, "יוצרים"] = ";".join(new_creators)
-
-        if not copyright_analysis_done:
-            if len(multiple_creators) > 0:
-                field_952g += "Not all creators are cataloged; "
-            if len(unknown_roles) > 0:
-                field_952g += "Creator undetermined: " + ", ".join(unknown_roles)
-            if len(field_952g) > 3:
-                df.loc[index, "952_g"] = field_952g
+        if len(multiple_creators) > 0:
+            field_952g += "Not all creators are cataloged; "
+        if len(unknown_roles) > 0:
+            field_952g += "Creator undetermined: " + ", ".join(unknown_roles)
+        if len(field_952g) > 3:
+            df.loc[index, "952_g"] = field_952g
     return df
 
 
@@ -728,6 +733,8 @@ def create_MARC_100_110(df):
 
     # check if first creator is a person or a corporate body
     for index, row in df["יוצר_ראשון"].iteritems():
+        if row == "" or row == "[]":
+            continue
         if is_corp(row, Authority_instance.df_creator_corps_role):
             df.loc[index, "1102"] = row
         elif is_pers(row, Authority_instance.df_creator_pers_role):
@@ -2104,8 +2111,12 @@ def create_907_value(dict_907):
         if len(value) == 0:
             return ""
         else:
-            words.append(tag[3:] + value)
-    return_val = "$$" + "$$".join(words)
+            if "_" in tag:
+
+                words.append(tag[5:] + value)
+            else:
+                words.append(tag[3:] + value)
+    return_val = ";".join(words)
     return_val.replace("$$$$", "$$")
     return return_val
 
@@ -2191,31 +2202,57 @@ def add_MARC_035(collection):
 
 
 def create_field_dict(file, tag):
-    d = {}
-    for record in file.getElementsByTagName("record"):
-        mms_id = next(
-            e.childNodes[0].data
-            for e in record.getElementsByTagName("controlfield")
-            if e.attributes["tag"].value == "001"
-        )
-        dd = {}
-        for e in record.getElementsByTagName("datafield"):
-            if e.attributes["tag"].value == tag:
-                val = list()
-                for sb in e.getElementsByTagName("subfield"):
-                    # dd["952"] = (
-                    #         "$$" + sb.attributes["code"].value + sb.childNodes[0].data
-                    # )
+    handler = XmlHandler()
+    records = pymarc.marcxml.parse_xml_to_array(file)
+    dd = defaultdict(lambda: defaultdict(str))
+    for record in records:
 
-                    val.append(
-                        "$$" + sb.attributes["code"].value + sb.childNodes[0].data
-                    )
-                    # if val_952.startswith("$$$$"):
-                    #     val_952 = dd["952"][2:]
-                dd[tag] = "".join(val)
+        index = 1
+        for field in record.get_fields(tag):
+            key = f'{field.tag}{"".join(field.indicators)}_{index}'
+            key = "".join([x for x in key if x != " "])
+            value = ""
+            for subfield in field.subfields:
+                if tag == "952" and subfield == "g":
+                    continue
+                if len(subfield) == 1:
+                    value += f"$${subfield}"
+                else:
+                    value += subfield
+            dd[record["001"].value()][key] = value
+            index += 1
 
-        d[mms_id] = dd
-    return d
+    return dd
+
+
+# def create_field_dict(file, tag):
+#     d = {}
+#     for record in file.getElementsByTagName("record"):
+#         mms_id = next(
+#             e.childNodes[0].data
+#             for e in record.getElementsByTagName("controlfield")
+#             if e.attributes["tag"].value == "001"
+#         )
+#         dd = {}
+#         for e in record.getElementsByTagName("datafield"):
+#             if e.attributes["tag"].value == tag:
+#                 val = list()
+#                 field_number = 1
+#                 for sb in e.getElementsByTagName("subfield"):
+#                     # dd["952"] = (
+#                     #         "$$" + sb.attributes["code"].value + sb.childNodes[0].data
+#                     # )
+#
+#                     val.append(
+#                         "$$" + sb.attributes["code"].value + sb.childNodes[0].data
+#                     )
+#                     # if val_952.startswith("$$$$"):
+#                     #     val_952 = dd["952"][2:]
+#                 dd[f'{tag}_{str(field_number)}'] = "".join(val)
+#                 field_number += 1
+#
+#         d[mms_id] = dd
+#     return d
 
 
 def update_df_with_field_dict(df, tag_dict, tag):
@@ -2225,7 +2262,7 @@ def update_df_with_field_dict(df, tag_dict, tag):
                 sys.stderr.write(f"this index: {mms_id} for {row['סימול']} is missing")
             elif str(mms_id) not in tag_dict.keys():
                 sys.stderr.write(
-                    f"there is no 952 field for : {mms_id}, for call number {row['סימול']}\n."
+                    f"there is no {tag} field for : {mms_id}, for call number {row['סימול']}\n."
                 )
                 sys.exit()
             elif len(tag_dict[str(mms_id)]) == 0:
@@ -2236,9 +2273,13 @@ def update_df_with_field_dict(df, tag_dict, tag):
             sys.stderr.write(e)
             pass
     if tag == "952":
-        # df[tag] = df[tag].astype("str") + df["952_g"]
+
+        df[tag] = df[tag].astype("str") + df["952_g"]
         df[tag] = df[tag].astype("str")
         df = drop_col_if_exists(df, "952_g")
+
+    if tag == "915":
+        df = explode_col_to_new_df(df, tag)
     return df
 
 
@@ -2246,24 +2287,24 @@ def add_copyright_field_from_alma(collection):
     rosetta_file_path = lookup_rosetta_file(
         collection.digitization_path, collection.collection_id
     )
-    rosetta_file = minidom.parse(rosetta_file_path)
+    # rosetta_file = minidom.parse(rosetta_file_path)
 
-    dict_952 = create_field_dict(rosetta_file, "952")
+    dict_952 = create_field_dict(rosetta_file_path, "952")
     collection.df_final_data = update_df_with_field_dict(
         collection.df_final_data, dict_952, tag="952"
     )
 
-    dict_915 = create_field_dict(rosetta_file, "915")
+    dict_915 = create_field_dict(rosetta_file_path, "915")
     collection.df_final_data = update_df_with_field_dict(
         collection.df_final_data, dict_915, tag="915"
     )
 
-    dict_903 = create_field_dict(rosetta_file, "903")
+    dict_903 = create_field_dict(rosetta_file_path, "903")
     collection.df_final_data = update_df_with_field_dict(
         collection.df_final_data, dict_903, tag="903"
     )
 
-    dict_939 = create_field_dict(rosetta_file, "939")
+    dict_939 = create_field_dict(rosetta_file_path, "939")
     collection.df_final_data = update_df_with_field_dict(
         collection.df_final_data, dict_939, tag="939"
     )
@@ -2381,16 +2422,30 @@ def create_MARC_590_sponsors(df, branch):
     return df
 
 
-def create_MARC_650(df):
+def create_MARC_650(df) -> pd.DataFrame:
+    """
+        map subject keyword from the "מילות מפתח_נושאים" column.
+        according to Authority_instance mapping tables for subjects
+    :param df:
+    :return:
+    """
+
+    # first remove empty values from dict
+    subject_mapper = {
+        k: v for k, v in Authority_instance.df_subject_mapper.items() if v
+    }
 
     for index, row in df.iterrows():
         if row["מילות מפתח_נושאים"] == "" or row["מילות מפתח_נושאים"] is np.nan:
             continue
-
+        new_subjects = list()
         subject_list = row["מילות מפתח_נושאים"].split(";")
 
         for subject in subject_list:
-            if subject in Authority_instance.df_subject_mapper.keys():
-                df.loc[index, "650 7"] = Authority_instance.df_subject_mapper[subject]
-
+            if subject in subject_mapper.keys():
+                new_subjects.append(subject_mapper[subject])
+        if len(subject_list) > 1:
+            df.loc[index, "650 7"] = ";".join(new_subjects)
+    if "650 7" in list(df.columns):
+        df = explode_col_to_new_df(df, "650 7")
     return df

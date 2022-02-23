@@ -195,7 +195,9 @@ def check_mandatory_cols_v1(df):
         "COMBINED_CREATORS",
     ]
 
-    df["COMBINED_CREATORS"] = df["COLLECTION_CREATOR"].astype(str) + ";" + df["COMBINED_CREATORS"].astype(str)
+    df["COMBINED_CREATORS"] = (
+        df["COLLECTION_CREATOR"].astype(str) + ";" + df["COMBINED_CREATORS"].astype(str)
+    )
     df["COMBINED_CREATORS"] = df["COMBINED_CREATORS"].map(lambda x: x.strip(";nan"))
     #     assert (mandatory_cols in list(df.columns)), "not all mandatory columns exist in table"
     for col in mandatory_cols_version1:
@@ -862,7 +864,10 @@ def main():
     elif "COMBINED_CREATORS" in list(collection.full_catalog.columns):
         # check_mandatory_cols_v1(collection.full_catalog.reset_index())
         check_mandatory_cols_v1(collection.full_catalog)
-    elif "ADD_CREATORS" in list(collection.full_catalog.columns) and not collection.full_catalog["ADD_CREATORS"].isnull().all():
+    elif (
+        "ADD_CREATORS" in list(collection.full_catalog.columns)
+        and not collection.full_catalog["ADD_CREATORS"].isnull().all()
+    ):
         collection.full_catalog = split_creators_by_type(
             collection.full_catalog, "ADD_CREATORS"
         )
@@ -1017,7 +1022,7 @@ def main():
             np.nan, ""
         )
         collection.full_catalog["BARCODE"] = collection.full_catalog["BARCODE"].apply(
-            lambda x: x.rstrip(".0")
+            lambda x: str(x).rstrip(".0")
         )
 
     logger.info(f"[ARCHIVAL_MATERIAL] Starting to work on ARCHIVAL_MATERIAL column")

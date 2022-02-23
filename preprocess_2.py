@@ -86,6 +86,7 @@ def main():
     logger.info("[MARC 100/110] Creating  MARC 100/110 - Creators (first)")
     collection.df_final_data = marc.create_MARC_100_110(collection.df_final_data)
 
+
     # create 300 (EXTENT) (היקף)
     logger.info("[MARC 300] Creating  MARC 300 - EXTENT ")
     collection.df_final_data = marc.create_MARC_300(collection.df_final_data)
