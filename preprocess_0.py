@@ -152,12 +152,16 @@ def main(**collection):
     ) = create_directory("Alma", BASE_PATH)
 
     FILE_PATH = Path(digitization_path / "ROS" / (collection_id + "_907.xml"))
-    try:
-        FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
-    except FileNotFoundError:
-        sys.stderr.write(
-            f"No file {FILE_PATH} exists. Please export XML and run again!"
-        )
+    while True:
+        try:
+            FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))
+            break
+        except FileNotFoundError:
+            sys.stderr.write(
+                f"No file {FILE_PATH} exists. Please export XML and run again!"
+            )
+            if str(input("do you want to exit? (y/n)")).lower() == "y":
+                sys.exit()
 
     # collection = Collection.retrieve_collection()
     """ initialize logger for the logging file for that collection"""
@@ -182,7 +186,7 @@ def main(**collection):
     check_custom04_file(file_full_path)
 
     logger.info("Saving Dataframe to Excel file in the custom04 folder")
-    df_collection.to_excel(file_full_path)
+    df.to_excel(file_full_path)
 
     # create_907_json(df_collection, collection_id, digitization_path)
 

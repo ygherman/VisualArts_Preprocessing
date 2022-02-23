@@ -206,6 +206,22 @@ class Test_MARC(TestCase):
         )
         self.assertEqual(create_710_current_owner_val(""), "")
 
+        # def test_create_907_value(self):
+        #     from VC_collections.marc import create_907_value
+        #     from collections import defaultdict
+        #     test_data =
+        #     {'990052543790205171': defaultdict(str,
+        #      {'915_1': '$$aהסכם עמוס חץ 30052018',
+        #       '915_2': '$$aמדיניות מסמכים מנהליים 04062019'})}
+        #
+        #     self.fail()
+
+    def test_find_unknown_multiple_in_column(self):
+        from VC_collections.marc import find_unknown_multiple_in_column
+        test_data_only_unknown = pd.Series(['לא ידוע [מו"ל];לא ידוע [מעצב גרפי];לא ידוע [מחבר]'], index =['יוצרים'])
+        self.assertEqual(find_unknown_multiple_in_column(test_data_only_unknown,"יוצרים"),([], ['מו"ל', 'מעצב גרפי', 'מחבר'], []) )
+
+        test_data_unknown_and_multiple = pd.Series(['לא ידוע [מו"ל];לא ידוע [מעצב גרפי];ריבוי [מחבר]'], index =['יוצרים'])
 
 if __name__ == "__main__":
     main()

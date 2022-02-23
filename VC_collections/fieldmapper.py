@@ -247,10 +247,12 @@ collection_field_mapper = {
     "שם האוסף": "UNITITLE",
     "שם הארכיון": "UNITITLE",
     "שםהארכיון": "UNITITLE",
+    "שםהארכיוןבעברית": "UNITITLE",
     "שםהאוסף": "UNITITLE",
     "שםהאוסףבאנגלית": "UNITITLE_ENG",
     "שםהארכיוןבאנגלית": "UNITITLE_ENG",
     "כותרתערבית": "UNITITLE_AR",
+    "שם הארכיון בערבית": "UNITITLE_AR",
     "כותרת": "UNITITLE",
     "תאריך חופשי": "DATE",
     "תאריךחופשי": "DATE",
@@ -314,7 +316,7 @@ collection_field_mapper = {
     "תאריך הרישום": "DATE_CATALOGING",
     "הערותסוקר": "NOTES",
     "תקציר": "SUMMARY",
-    "תקציראנגלית": "SUMMARY_ENG"
+    "תקציראנגלית": "SUMMARY_ENG",
 }
 
 final_fields_back_mapper = {
