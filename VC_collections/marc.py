@@ -668,7 +668,10 @@ def create_MARC_952_mul_unknown_creators(df, copyright_analysis_done):
         if len(new_creators) == 0:
             df.loc[index, "24500"] = df.loc[index, "24510"]
             df.loc[index, "24510"] = ""
-            df.loc[index, "יוצרים"] = new_creators
+            try:
+                df.loc[index, "יוצרים"] = new_creators
+            except:
+                continue
 
         elif len(new_creators) >= 1:
             df.loc[index, "יוצרים"] = ";".join(new_creators)
@@ -2260,7 +2263,7 @@ def update_df_with_field_dict(df, tag_dict, tag):
         try:
             if mms_id == np.nan:
                 sys.stderr.write(f"this index: {mms_id} for {row['סימול']} is missing")
-            elif str(mms_id) not in tag_dict.keys():
+            elif str(mms_id) not in tag_dict.keys() and tag != "915":
                 sys.stderr.write(
                     f"there is no {tag} field for : {mms_id}, for call number {row['סימול']}\n."
                 )
@@ -2312,14 +2315,30 @@ def add_copyright_field_from_alma(collection):
     return collection
 
 
-def add_MARC_597(df):
+def add_597_picture_credits(df, file):
+    tag_dict = create_field_dict(file, "597")
+    df = update_df_with_field_dict(df, tag_dict, "597")
+    return df
 
+
+
+def add_MARC_597(collection):
+    # TODO add 597$d 597$e 597$f if they appear in [collection_id]_907.xml alma last export file
+
+    df = collection.df_final_data
     df["597"] = (
         "$$a" + df["קרדיט עברית"].astype(str) + "$$a" + df["קרדיט אנגלית"].astype(str)
     )
     df["597"] = df["597"].str.replace(r"\n", " ", regex=True)
     df = drop_col_if_exists(df, "קרדיט עברית")
     df = drop_col_if_exists(df, "קרדיט אנגלית")
+
+    df = add_597_picture_credits(df, lookup_rosetta_file(
+        collection.digitization_path, collection.collection_id
+    ))
+
+
+
 
     return df
 

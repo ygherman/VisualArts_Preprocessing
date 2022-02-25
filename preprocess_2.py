@@ -174,7 +174,7 @@ def main():
 
     # add 597 (CREDIT)
     logger.info("[MARC 597] Creating MARC 597 - CREDITS")
-    collection.df_final_data = marc.add_MARC_597(collection.df_final_data)
+    collection.df_final_data = marc.add_MARC_597(collection)
 
     # create 921, 933 (CATALOGUER, CATALOGING DATE)
     if collection.branch != "REI":
