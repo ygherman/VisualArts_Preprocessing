@@ -1996,7 +1996,7 @@ def create_MARC_534(df):
             + df["תאריך יצירת החפץ / הטקסט המקורי מאוחר"].astype(str)
         )
         df[new_534_col] = df[new_534_col].map(
-            lambda x: "$$aנוצר לראשונה בין התאריכים: " + str(x).replace(".0", "")
+            lambda x: "$$cנוצר לראשונה בין התאריכים: " + str(x)
             if x != " - "
             else ""
         )
