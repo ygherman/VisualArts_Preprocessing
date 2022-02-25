@@ -984,6 +984,22 @@ def main():
         .apply(clean_date_format)
     )
 
+    logger.info("[DATES] cleaning dates - PHOTO_DATE_EARLY")
+    collection.full_catalog["PHOTO_DATE_EARLY"] = (
+        collection.full_catalog["PHOTO_DATE_EARLY"]
+            .astype(str)
+            .replace(r"\.0$", "", regex=True)
+            .apply(clean_date_format)
+    )
+
+    logger.info("[DATES] cleaning dates - PHOTO_DATE_LATE")
+    collection.full_catalog["PHOTO_DATE_EARLY"] = (
+        collection.full_catalog["PHOTO_DATE_EARLY"]
+            .astype(str)
+            .replace(r"\.0$", "", regex=True)
+            .apply(clean_date_format)
+    )
+
     if "COMBINED_CREATORS" not in list(collection.full_catalog):
         logger.info(
             f"[COMBINED_CREATORS] CREATING COMBINED CREATORS for {collection.collection_id} , at: {datetime.now()}"
