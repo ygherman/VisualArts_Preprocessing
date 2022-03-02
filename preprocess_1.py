@@ -575,13 +575,16 @@ def create_final_file(collection):
 def update_df_in_gdrive(collection, worksheet_name="קטלוג סופי", copy=False):
     credentials = get_google_drive_credentials()
     if worksheet_name == "קטלוג סופי":
-        d2g.upload(
-            collection.full_catalog.applymap(str),
-            collection.google_sheet_file_id,
-            worksheet_name,
-            credentials=credentials,
-            row_names=True,
-        )
+        try:
+            d2g.upload(
+                collection.full_catalog.applymap(str),
+                collection.google_sheet_file_id,
+                worksheet_name,
+                credentials=credentials,
+                row_names=True,
+            )
+        except:
+            exit()
         gc = gspread.authorize(credentials)
         sh = gc.open_by_key(collection.google_sheet_file_id)
         if "מספרי מערכת חסרים" in sh.worksheets():
@@ -987,15 +990,15 @@ def main():
     logger.info("[DATES] cleaning dates - PHOTO_DATE_EARLY")
     collection.full_catalog["PHOTO_DATE_EARLY"] = (
         collection.full_catalog["PHOTO_DATE_EARLY"]
-            .astype(str)
-            .replace(r"\.0$", "", regex=True)
+        .astype(str)
+        .replace(r"\.0$", "", regex=True)
     )
 
     logger.info("[DATES] cleaning dates - PHOTO_DATE_LATE")
     collection.full_catalog["PHOTO_DATE_LATE"] = (
         collection.full_catalog["PHOTO_DATE_LATE"]
-            .astype(str)
-            .replace(r"\.0$", "", regex=True)
+        .astype(str)
+        .replace(r"\.0$", "", regex=True)
     )
 
     if "COMBINED_CREATORS" not in list(collection.full_catalog):
