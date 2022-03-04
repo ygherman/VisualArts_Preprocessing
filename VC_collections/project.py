@@ -197,7 +197,10 @@ def get_root_index_and_title(index: str, df: pd.DataFrame) -> tuple:
 
     if root_call_number in check_col_series:
         root_index = df.index[df["סימול"] == root_call_number][0]
-        title = df.loc[root_index, "24510"].strip("$$a")
+        if df.loc[root_index, "24510"].strip("$$a") != "":
+            title = df.loc[root_index, "24510"].strip("$$a")
+        else:
+            title = df.loc[root_index, "24500"].strip("$$a")
     else:
         logger.error(
             f"ROOT MMS ID of {index} is not in table - check table! and run again"

@@ -137,6 +137,7 @@ def clean_date_format(string_date):
         "%d-%m-%Y",
         "%d.%m.%Y",
         "%d.%m.%y",
+        "%Y-%d-%M"
     ]
 
     date_formats_6 = [

@@ -164,10 +164,9 @@ def create_MARC_245(df):
             1:,
         ]["כותרת אנגלית"].empty
     ):
+        sample_text = df.loc[df["5202"] != ""]["5202"].tolist()[1].replace("$$a", "")
 
-        main_lang = check_lang(
-            df.loc[df["5202"] != ""]["5202"].tolist()[1].replace("$$a", "")
-        )
+        main_lang = check_lang(sample_text.split()[0])
         if main_lang == "heb":
             main_title_col = "כותרת"
         elif main_lang == "lat":
@@ -653,7 +652,7 @@ def create_MARC_952_mul_unknown_creators(df, copyright_analysis_done):
     # TODO Add check if 1xx is empty then 245 needs to change from first indicator 1 to 0 - Where?
 
     df["24500"] = ""
-    df["952_g"] =""
+    df["952_g"] = ""
 
     for index, row in df.iterrows():
         field_952g = "$$g"
@@ -1996,16 +1995,9 @@ def create_MARC_534(df):
             + df["תאריך יצירת החפץ / הטקסט המקורי מאוחר"].astype(str)
         )
         df[new_534_col] = df[new_534_col].map(
-            lambda x: "$$cנוצר לראשונה בין התאריכים: " + str(x)
-            if x != " - "
-            else ""
+            lambda x: "$$pנוצר לראשונה בין התאריכים: $$c" + str(x) if x != " - " else ""
         )
 
-    return df
-
-
-def create_MARC_STA(df):
-    df["STA"] = "$$aSUPPRESSED"
     return df
 
 
@@ -2125,6 +2117,7 @@ def create_907_value(dict_907):
 
 
 def add_MARC_907(collection):
+    logger = logging.getLogger()
     rosetta_file_path = lookup_rosetta_file(
         collection.digitization_path, collection.collection_id
     )
@@ -2138,7 +2131,7 @@ def add_MARC_907(collection):
             if index == np.nan:
                 sys.stderr.write(f"this index: {index} for {row['סימול']} is missing")
             elif str(index) not in rosetta_dict.keys():
-                sys.stderr.write(
+                logger.error(
                     f"there is no 907 field for : {index}, for call number {row['סימול']}\n."
                 )
                 sys.exit()
@@ -2222,6 +2215,7 @@ def create_field_dict(file, tag):
                     value += f"$${subfield}"
                 else:
                     value += subfield
+
             dd[record["001"].value()][key] = value
             index += 1
 
@@ -2263,7 +2257,7 @@ def update_df_with_field_dict(df, tag_dict, tag):
         try:
             if mms_id == np.nan:
                 sys.stderr.write(f"this index: {mms_id} for {row['סימול']} is missing")
-            elif str(mms_id) not in tag_dict.keys() and tag != "915":
+            elif str(mms_id) not in tag_dict.keys() and tag != "915" and tag != "597":
                 sys.stderr.write(
                     f"there is no {tag} field for : {mms_id}, for call number {row['סימול']}\n."
                 )
@@ -2321,7 +2315,6 @@ def add_597_picture_credits(df, file):
     return df
 
 
-
 def add_MARC_597(collection):
     # TODO add 597$d 597$e 597$f if they appear in [collection_id]_907.xml alma last export file
 
@@ -2333,12 +2326,9 @@ def add_MARC_597(collection):
     df = drop_col_if_exists(df, "קרדיט עברית")
     df = drop_col_if_exists(df, "קרדיט אנגלית")
 
-    df = add_597_picture_credits(df, lookup_rosetta_file(
-        collection.digitization_path, collection.collection_id
-    ))
-
-
-
+    df = add_597_picture_credits(
+        df, lookup_rosetta_file(collection.digitization_path, collection.collection_id)
+    )
 
     return df
 
