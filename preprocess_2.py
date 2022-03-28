@@ -58,11 +58,11 @@ def main():
         collection.df_final_data, collection.collection_id
     )
 
-    # create 008
+    # create 008 default
     logger.info(f"[008] Creating  MARC 008 field")
     collection.df_final_data = marc.create_MARC_initial_008(collection.df_final_data)
 
-    # create 520 (תיאור)
+    # create 520 (תיאור),
     logger.info(f"[520] Creating  MARC 520 - SCOPE AND CONTENT")
     collection.df_final_data = marc.create_MARC_520(collection.df_final_data)
 
