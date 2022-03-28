@@ -286,7 +286,9 @@ def find_name_in_viaf(name):
     name_lang = check_lang(name)
     try:
         r = requests.get(
-            url=f'http://www.viaf.org/viaf/search?query=cql.any+=+"{name}"&maximumRecords=5&httpAccept=application/json'
+            url="http://viaf.org/viaf/search?query=local.personalNames+%3D+%22"
+                + name
+                + "%22+and+local.sources+%3D+%22lc%22&sortKeys=holdingscount&maximumRecords=10&httpAccept=application/json"
         )
 
     except requests.exceptions.RequestException as e:  # This is the correct syntax
