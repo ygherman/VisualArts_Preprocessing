@@ -1447,6 +1447,10 @@ def create_MARC_260_008_date(df, start_date_col, end_date_col, text_date_col):
     return df
 
 
+def is_english_scopecontent(df):
+    return "תיאור אנלית" in list(df.columns)
+
+
 def create_MARC_520(df):
     """
         converts the ['תיאור'] field to MARC21 520 $a encoded field.
@@ -1458,10 +1462,26 @@ def create_MARC_520(df):
     :return The Dataframe with the new 520 field
     """
 
-    df["5202"] = df["תיאור"].apply(
-        lambda x: "$$a" + str(x).strip().replace("\n", " ") if str(x) != "" else ""
+    # scope and content
+    if is_english_scopecontent(df):
+        df["5202_1"] = df["תיאור"].apply(
+        lambda x: "$$a" + str(x).strip().replace("\n", " ") +"$$9" + check_lang(x)
+        if str(x) != "" else ""
     )
 
+        df["5202_2"] = df["תיאור אנגלית"].apply(
+        lambda x: "$$a" + str(x).strip().replace("\n", " ") + "$$9" + check_lang(x)
+        if str(x) != "" else ""
+    )
+
+    else:
+
+        df["5202"] = df["תיאור"].apply(
+            lambda x: "$$a" + str(x).strip().replace("\n", " ") if str(x) != "" else ""
+        )
+
+
+    # Summary
     df["520"] = df["תקציר"].apply(
         lambda x: "$$a" + str(x).strip().replace("\n", " ") + "$$9" + check_lang(x)
         if str(x) != ""
@@ -1551,6 +1571,7 @@ def create_date_format(string_date):
     string_date_to_datetime = ""
     date_formats = [
         "%Y-%m-%d",
+        "%Y-%d-%m",
         "%Y-%m",
         "%Y-%m",
         "%Y-%m-%d %H:%M",
@@ -1676,6 +1697,7 @@ def create_MARC_BAS(df):
     """
 
     :param df: the original Dataframe
+    :return: The modified datafrmae with the additional BAS encoded field contaning 'VIS'
     :return: The modified datafrmae with the additional BAS encoded field contaning 'VIS'
     """
     BAS = input("Please fill in the 906/BAS for this collection: \n")
@@ -2261,7 +2283,7 @@ def update_df_with_field_dict(df, tag_dict, tag):
                 sys.stderr.write(
                     f"there is no {tag} field for : {mms_id}, for call number {row['סימול']}\n."
                 )
-                sys.exit()
+
             elif len(tag_dict[str(mms_id)]) == 0:
                 continue
             else:
