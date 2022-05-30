@@ -488,7 +488,8 @@ def create_df_from_gs(spreadsheet, worksheet):
     sheet = spreadsheet.worksheet(worksheet)
     dict_gs = sheet.get_all_records(head=1)
     #     pprint.pprint(dict_gs)
-    df = pd.DataFrame(dict_gs)
+    df = pd.DataFrame(dict_gs, dtype = str)
+
     cols = list(dict_gs[1].keys())
     #     print(cols)
 

@@ -294,7 +294,7 @@ def add_current_owner(df_collection, df_credits, collection_id):
     elif "סימול הארכיון" in list(df_collection.columns):
         df_collection = df_collection.set_index("סימול הארכיון")
 
-    desc_level_value = df_collection.loc[collection_id, "רמת תיאור"]
+    desc_level_value = df_collection.loc[collection_id.strip(), "רמת תיאור"].strip()
 
     if (
         "בעלים נוכחי" in list(df_collection.columns)
@@ -887,7 +887,7 @@ class Collection:
             self.collection_id + "_final_" + self.dt_now + ".txt"
         )
 
-        with open(output_file_name, "w", encoding="utf8") as f:
+        with open(output_file_name, "w", encoding="utf8", newline="\n") as f:
             for index, row in df.iterrows():
 
                 f.write(f"{index} LDR   {row['LDR']}\n")
