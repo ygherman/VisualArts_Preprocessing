@@ -158,21 +158,25 @@ def create_MARC_245(df):
     :return The Dataframe with the new 245 field
     """
 
-    if (
-        column_exists(df, "כותרת אנגלית")
-        and not df.iloc[
-            1:,
-        ]["כותרת אנגלית"].empty
-    ):
-        sample_text = df.loc[df["5202"] != ""]["5202"].tolist()[1].replace("$$a", "")
+    # if (
+    #     column_exists(df, "כותרת אנגלית")
+    #     and not df.iloc[
+    #         1:,
+    #     ]["כותרת אנגלית"].empty
+    # ):
+    #     try:
+    #         sample_text = df.loc[df["5202"] != ""]["5202"].tolist()[1].replace("$$a", "")
+    #
+    #     except Exception as e:
+    #         sample_text = df.loc[df["5202_1"] != ""]["5202_1"].tolist()[1].replace("$$a", "")
 
-        main_lang = check_lang(sample_text.split()[0])
-        if main_lang == "heb":
-            main_title_col = "כותרת"
-        elif main_lang == "lat":
-            main_title_col = "כותרת אנגלית"
-        elif main_lang == "ara":
-            main_title_col = "כותרת ערבית"
+    main_lang = check_lang(input(str(f'Pleace enter the main cataloging language for this catalog [heb, ara or lat]')))
+    if main_lang == "heb":
+        main_title_col = "כותרת"
+    elif main_lang == "lat":
+        main_title_col = "כותרת אנגלית"
+    elif main_lang == "ara":
+        main_title_col = "כותרת ערבית"
 
     else:
         main_title_col = "כותרת"
@@ -1448,7 +1452,7 @@ def create_MARC_260_008_date(df, start_date_col, end_date_col, text_date_col):
 
 
 def is_english_scopecontent(df):
-    return "תיאור אנלית" in list(df.columns)
+    return "תיאור אנגלית" in list(df.columns)
 
 
 def create_MARC_520(df):
@@ -1465,12 +1469,12 @@ def create_MARC_520(df):
     # scope and content
     if is_english_scopecontent(df):
         df["5202_1"] = df["תיאור"].apply(
-        lambda x: "$$a" + str(x).strip().replace("\n", " ") +"$$9" + check_lang(x)
+        lambda x: "$$a" + str(x).strip().replace("\n", " ")
         if str(x) != "" else ""
     )
 
         df["5202_2"] = df["תיאור אנגלית"].apply(
-        lambda x: "$$a" + str(x).strip().replace("\n", " ") + "$$9" + check_lang(x)
+        lambda x: "$$a" + str(x).strip().replace("\n", " ")
         if str(x) != "" else ""
     )
 
@@ -2275,11 +2279,13 @@ def create_field_dict(file, tag):
 
 
 def update_df_with_field_dict(df, tag_dict, tag):
+    logger = logging.getLogger()
     for mms_id, row in df.iterrows():
         try:
             if mms_id == np.nan:
                 sys.stderr.write(f"this index: {mms_id} for {row['סימול']} is missing")
             elif str(mms_id) not in tag_dict.keys() and tag != "915" and tag != "597":
+                logger.error(f"there is no {tag} field for : {mms_id}, for call number {row['סימול']}\n.")
                 sys.stderr.write(
                     f"there is no {tag} field for : {mms_id}, for call number {row['סימול']}\n."
                 )
@@ -2299,6 +2305,7 @@ def update_df_with_field_dict(df, tag_dict, tag):
 
     if tag == "915":
         df = explode_col_to_new_df(df, tag)
+        df = drop_col_if_exists(df, "915")
     return df
 
 

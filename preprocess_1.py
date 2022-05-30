@@ -476,7 +476,7 @@ def create_authorities_report(collection, authority_type):
         axis=1,
     )
 
-    if authority_type == "PERS":  # or authority_type == "CORPS":
+    if authority_type == "PERS" and str(input("check persons against VIAF?")).lower() =="y":  # or authority_type == "CORPS":
         df_authority = check_against_viaf(df_authority)
 
     unique_authority_filename = collection.authorities_path / (
@@ -503,7 +503,7 @@ def create_authorities_report(collection, authority_type):
 
     if authority_type == "PERS":
         write_excel(
-            df_authority[["Name", "VIAF Name", "VIAF NLI id"]].drop_duplicates(),
+            df_authority,
             # pd.DataFrame(df_authority.Name.unique()),
             unique_authority_filename,
             "unique_" + authority_type.lower(),
@@ -585,7 +585,8 @@ def update_df_in_gdrive(collection, worksheet_name="קטלוג סופי", copy=F
                 credentials=credentials,
                 row_names=True,
             )
-        except:
+        except Exception as e:
+            sys.stderr.write(f'Exception {e} occured')
             exit()
         gc = gspread.authorize(credentials)
         sh = gc.open_by_key(collection.google_sheet_file_id)

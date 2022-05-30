@@ -23,6 +23,7 @@ VERSION
     $
 """
 import os
+import re
 from pathlib import Path
 
 import gspread
@@ -311,6 +312,7 @@ class Authority:
         df_level, level_cols = create_df_from_gs(spreadsheet, "רמת תיאור")
 
         df_subjects, df_subjects_cols = create_df_from_gs(spreadsheet, "נושאים")
+        df_subjects["650 7_ENG"] = df_subjects["650 7_ENG"].str.replace('\u200f', "")
         df_subjects_mapper = df_subjects.set_index("נושא עברית").to_dict()["650 7_ENG"]
 
         (
