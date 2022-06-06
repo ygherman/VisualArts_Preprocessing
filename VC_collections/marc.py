@@ -170,7 +170,7 @@ def create_MARC_245(df):
     #     except Exception as e:
     #         sample_text = df.loc[df["5202_1"] != ""]["5202_1"].tolist()[1].replace("$$a", "")
 
-    main_lang = check_lang(input(str(f'Pleace enter the main cataloging language for this catalog [heb, ara or lat]')))
+    main_lang = input(str(f'Please enter the main cataloging language for this catalog [heb, ara or lat]: ').lower())
     if main_lang == "heb":
         main_title_col = "כותרת"
     elif main_lang == "lat":
