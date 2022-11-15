@@ -16,8 +16,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from pymarc import XMLWriter, Record, Field
 
 import preprocess_0
-import Data.vis_907_dict
-from Data import vis_907_dict
+
 from VC_collections.project import get_branch_colletionID
 from . import columns
 from .AuthorityFiles import Authority_instance
@@ -712,8 +711,12 @@ class Collection:
         export_entire_catalog(self, self.dfs, stage="PRE_FINAL")
 
         self.df_catalog = remove_instructions_row(remove_empty_rows(self.dfs["קטלוג"]))
-        self.df_collection = remove_instructions_row(
-            remove_empty_rows(self.dfs["אוסף"])
+        try:
+            self.df_collection = remove_instructions_row(
+            remove_empty_rows(self.dfs["אוסף"]))
+        except KeyError:
+            self.df_collection = remove_instructions_row(
+                remove_empty_rows(self.dfs["רמת ארכיון"])
         )
 
         if self.branch != "REI":
@@ -797,7 +800,7 @@ class Collection:
             keep = False
 
         for index, row in df.iterrows():
-            if row["351"] == "$cFonds Record" and not keep:
+            if row["351"] == "$$cFonds Record" and not keep:
                 continue
 
             record = Record()

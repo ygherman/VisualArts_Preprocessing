@@ -218,10 +218,19 @@ class Test_MARC(TestCase):
 
     def test_find_unknown_multiple_in_column(self):
         from VC_collections.marc import find_unknown_multiple_in_column
-        test_data_only_unknown = pd.Series(['לא ידוע [מו"ל];לא ידוע [מעצב גרפי];לא ידוע [מחבר]'], index =['יוצרים'])
-        self.assertEqual(find_unknown_multiple_in_column(test_data_only_unknown,"יוצרים"),([], ['מו"ל', 'מעצב גרפי', 'מחבר'], []) )
 
-        test_data_unknown_and_multiple = pd.Series(['לא ידוע [מו"ל];לא ידוע [מעצב גרפי];ריבוי [מחבר]'], index =['יוצרים'])
+        test_data_only_unknown = pd.Series(
+            ['לא ידוע [מו"ל];לא ידוע [מעצב גרפי];לא ידוע [מחבר]'], index=["יוצרים"]
+        )
+        self.assertEqual(
+            find_unknown_multiple_in_column(test_data_only_unknown, "יוצרים"),
+            ([], ['מו"ל', "מעצב גרפי", "מחבר"], []),
+        )
+
+        test_data_unknown_and_multiple = pd.Series(
+            ['לא ידוע [מו"ל];לא ידוע [מעצב גרפי];ריבוי [מחבר]'], index=["יוצרים"]
+        )
+
 
 if __name__ == "__main__":
     main()
