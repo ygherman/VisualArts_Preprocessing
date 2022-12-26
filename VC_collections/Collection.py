@@ -7,6 +7,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from shutil import copyfile
+from sanitize_filename import sanitize
+ 
 
 import gspread
 import numpy as np
@@ -147,7 +149,7 @@ def export_entire_catalog(collection, df_sheets_dict, stage):
         )
 
     if type(df_sheets_dict) == dict:
-        write_excel(df_sheets_dict, file_path, list(df_sheets_dict.keys()))
+        write_excel(df_sheets_dict, sanitize(file_path), list(df_sheets_dict.keys()))
 
     # TODO check if collectin.full_catalog is of type df or of type dict of dfs?
     else:
@@ -636,11 +638,13 @@ class Collection:
 
         self.cms = CMS
         self.branch = branch
+
+        
         self.collection_id = collection_id
         self.dt_now = datetime.now().strftime("%Y%m%d")
 
         # create directory and sub-folders for collection
-        self.BASE_PATH = Path.cwd().parent.absolute() / (branch) / collection_id
+        self.BASE_PATH = Path.cwd().parent.absolute() / (branch) / collection_id.replace("*", "")
 
         # initialize directory with all folder and sub-folders for the collection
         (
@@ -680,7 +684,7 @@ class Collection:
 
         if (sys.argv[0]).endswith("preprocess_1.py"):
 
-            while not file_907_exists(self.aleph_custom04_path, collection_id):
+            while not file_907_exists(self.aleph_custom04_path, collection_id.replace("*","")):
 
                 sys.stderr.write(
                     f"no {collection_id}_alma_sysno.xlsx exists. \n Running preprocess_0 first"

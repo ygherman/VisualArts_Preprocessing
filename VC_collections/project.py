@@ -18,6 +18,8 @@ VERSION
 
     $
 """
+from sanitize_filename import sanitize
+
 import logging
 import os
 import sys
@@ -33,7 +35,7 @@ from .value import find_nth
 
 ROOTID_finder = lambda x: x[: find_nth(x, "-", x.count("-"))] if "-" in x else ""
 
-
+    
 def get_aleph_sid(custom04_path, collectionID, df):
     """
         Get Aleph sys ID
@@ -43,7 +45,7 @@ def get_aleph_sid(custom04_path, collectionID, df):
     :return: the Dataframe with a system number column
     :return:
     """
-    aleph_sysno_file = os.path.join(custom04_path, collectionID + "_aleph_sysno.xlsx")
+    aleph_sysno_file = sanitize(os.path.join(custom04_path, collectionID + "_aleph_sysno.xlsx"))
     assert os.path.isfile(aleph_sysno_file), "There is no such File: aleph_sysno_file"
 
     # parse sysno file
@@ -78,7 +80,7 @@ def get_alma_sid(custom04_path, collectionID, df):
     :return:
     """
     try:
-        alma_sysno_file = os.path.join(custom04_path, collectionID + "_alma_sysno.xlsx")
+        alma_sysno_file = sanitize(os.path.join(custom04_path, collectionID + "_alma_sysno.xlsx"))
     except:
         sys.stderr.write(
             f"There is no alma_sysno_file File for collection: {collectionID}."
@@ -134,7 +136,7 @@ def get_alma_sid(custom04_path, collectionID, df):
 
 def get_branch_colletionID(
     branch: str = "", collectionID: str = "", batch: bool = False
-) -> (str, str, str):
+):
     """
         Get Branch and CollectionID
     :param branch: the branch (Architect, Dance, Design or Theater
@@ -170,10 +172,17 @@ def get_branch_colletionID(
             else:
                 # we're happy with the value given.
                 break
+
+            
     elif batch:
         return "VC-" + branch, collectionID
 
+    
+    
     return CMS, branch, collectionID
+
+
+
 
 
 def get_root_index_and_title(index: str, df: pd.DataFrame) -> tuple:
@@ -220,7 +229,7 @@ def get_collection_paths(collectionID):
 
 
 def lookup_rosetta_file(digitization_path, collection_id):
-    rosetta_file_path = str(digitization_path / "ROS" / (collection_id + "_907.xml"))
+    rosetta_file_path = sanitize(str(digitization_path / "ROS" / (collection_id + "_907.xml")))
     if not Path.exists(Path(rosetta_file_path)):
         sys.stderr.write(
             f"[ERROR] no file at {rosetta_file_path} - please add file and run again!"

@@ -136,7 +136,7 @@ def main(**collection):
             branch = "REI"
         collection_id = input("Please enter collection id: ")
 
-    BASE_PATH = Path.cwd().parent / branch / collection_id
+    BASE_PATH = Path.cwd().parent / branch / collection_id.replace("*", "")
 
     (
         data_path,
@@ -151,7 +151,7 @@ def main(**collection):
         aleph_custom04_path,
     ) = create_directory("Alma", BASE_PATH)
 
-    FILE_PATH = Path(digitization_path / "ROS" / (collection_id + "_907.xml"))
+    FILE_PATH = Path(digitization_path / "ROS" / (collection_id.replace("*", "") + "_907.xml"))
     while True:
         try:
             FILE_PATH_XML = minidom.parse(FileIO(FILE_PATH))

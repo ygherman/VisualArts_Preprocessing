@@ -41,6 +41,7 @@ def create_directory(CMS, BASE_PATH):
 
     print("BASE_PATH", BASE_PATH)
     data_path = BASE_PATH / "Data"
+    data_path = data_path
     make_sure_path_exists(data_path)
 
     # create a Data Folder
